@@ -226,6 +226,8 @@ C> @}
       nf=nxz*nfaces*nelt
 
       call col3(jscr,jface,bmask,nf)
+! I don't know what to do with phi, and this is my first guess
+      call col2(jscr,z(1,iph),nf)
 
       do e=1,nelt
          do f=1,nfaces
@@ -235,7 +237,7 @@ C> @}
          enddo
       enddo
 
-! mass
+! mass. scrF={{rho}}{{u}}, scrG={{rho}}{{v}}, scrH={{rho}}{{w}}
       call col3(scrf,z(1,irho),z(1,iux),nf)
       call col3(scrg,z(1,irho),z(1,iuy),nf)
       if (if3d) then
@@ -251,9 +253,31 @@ C> @}
       call add2(fdot,z(1,ipr),nf)
       call col2(fdot,nx,nf)
       call addcol4(fdot,scrf,z(1,iuy),ny,nf)
-      if (if3d) call addcol4(fdot,scrg,z(1,iuz),nz,nf)
+      if (if3d) call addcol4(fdot,scrf,z(1,iuz),nz,nf)
+      call add2col2(flux(1,2),fdot,jscr,nf)
 
-! PICK UP HERE
+! y-momentum
+      call col3(fdot,scrg,z(1,iuy),nf)
+      call add2(fdot,z(1,ipr),nf)
+      call col2(fdot,ny,nf)
+      call addcol4(fdot,scrg,z(1,iux),nx,nf)
+      if (if3d) call addcol4(fdot,scrg,z(1,iuz),nz,nf)
+      call add2col2(flux(1,3),fdot,jscr,nf)
+
+! z-momentum
+      if (if3d) then
+         call col3(fdot,scrh,z(1,iuz),nf)
+         call add2(fdot,z(1,ipr),nf)
+         call col2(fdot,nz,nf)
+         call addcol4(fdot,scrh,z(1,iux),nx,nf)
+         call addcol4(fdot,scrh,z(1,iuy),ny,nf)
+         call add2col2(flux(1,4),fdot,jscr,nf)
+      endif
+
+! energy {{rho}}({{E}}+{{p}}){{u}}.n
+!!!   call add3(fdot,z(1,iu5),z(1,ipr),nf) ! NOT U5 NO. WE NEED A PARAMETER VECTOR AFTER ALL
+      if (if3d) call addcol4(fdot,scrg,z(1,iuz),nz,nf)
+      call add2col2(flux(1,5),fdot,jscr,nf)
 
       return
       end
