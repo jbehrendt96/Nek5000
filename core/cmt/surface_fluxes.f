@@ -53,8 +53,9 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 ! fill Dirichlet BC and mask
       call InviscidBC(fatface(iwm),fatface(iflx),nstate)
 
-! q- -> z-. Does nothing for Kennedy-Gruber, Pirozzoli, and most energy-
-!           conserving fluxes
+! q- -> z-. Kennedy-Gruber, Pirozzoli, and most energy-
+!           conserving fluxes have p=q, so I just divide total energy by
+!           U1 here since Kennedy-Gruber needs E
       call parameter_vector(fatface(iwm),nfq,nstate)
 
 ! z- -> z^, which is {{z}} for Kennedy-Gruber, Pirozzoli, and some parts
@@ -78,8 +79,12 @@ C> @}
 
 !-----------------------------------------------------------------------
 
-      subroutine roe_trivial(fatface,nf,ns)
-      real fatface(*)
+      subroutine rhoe_to_e(fatface,nf,ns)
+! converts U5=phi*rho*E on faces to E=e+1/2*ui*ui. Kennedy-Gruber fluxes
+      include 'CMTDATA'
+      real fatface(nf,ns)
+      call invcol2(fatface(1,iu5),fatface(1,irho),nf)
+      call invcol2(fatface(1,iu5),fatface(1,iph),nf)
       return
       end
 
@@ -225,6 +230,7 @@ C> @}
       nxz=lx1*lz1
       nf=nxz*nfaces*nelt
 
+      call rzero(flux,nf*toteq)
       call col3(jscr,jface,bmask,nf)
 ! I don't know what to do with phi, and this is my first guess
       call col2(jscr,z(1,iph),nf)
@@ -275,9 +281,11 @@ C> @}
       endif
 
 ! energy {{rho}}({{E}}+{{p}}){{u}}.n
-!!!   call add3(fdot,z(1,iu5),z(1,ipr),nf) ! NOT U5 NO. WE NEED A PARAMETER VECTOR AFTER ALL
-      if (if3d) call addcol4(fdot,scrg,z(1,iuz),nz,nf)
-      call add2col2(flux(1,5),fdot,jscr,nf)
+      call add3(fdot,z(1,iu5),z(1,ipr),nf) ! NOT U5 anymore. actually E
+      call addcol4(flux(1,5),fdot,scrf,nx,nf)
+      call addcol4(flux(1,5),fdot,scrg,ny,nf)
+      if (if3d) call addcol4(flux(1,5),fdot,scrh,nz,nf)
+      call col2(flux(1,5),jscr,nf)
 
       return
       end

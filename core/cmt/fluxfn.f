@@ -200,7 +200,8 @@ C> @}
       enddo
       rav=0.5*(rl +rr )
       pav=0.5*(pl +pr )
-      eav=0.5*(ul(5)/rl+ur(5)/rr)
+!     eav=0.5*(ul(5)/rl+ur(5)/rr)
+      eav=0.5*(ul(5)/ul(1)+ur(5)/ur(1))
       qav=0.0
       do j=1,ldim
          qav=qav+uav(j)*jav(j)
