@@ -53,8 +53,21 @@ c---------------------------------------------------------------------
       real                csound(lx1,ly1,lz1,lelt)
       common /cmtgasprop/ csound
 
-      real                cvgref,cpgref,gmaref,rgasref,molmass
-      common /cmtgasref/  cvgref,cpgref,gmaref,rgasref,molmass
+      real            cpgref,cvgref,cvjref,gmaref,rgasref,molmass,
+     $   MAref,MBref,CAref,CBref,   ! NTN for mixed model
+     $    rhoidref,rho0ref,EN_IDref,EN_Oref,
+     $    MWref,CWref,MCref,CCref,
+     $    AAref,
+     $    BBref,R1ref,R2ref,OMref,
+     $    AA,BB,OM,CC,CW
+
+      common /cmtgasref/cpgref,cvgref,cvjref,gmaref,rgasref,molmass,
+     $    MAref,MBref,CAref,CBref,   ! NTN for mixed model
+     $    rhoidref,rho0ref,EN_IDref,EN_Oref,
+     $    MWref,CWref,MCref,CCref,
+     $    AAref,
+     $    BBref,R1ref,R2ref,OMref,
+     $    AA,BB,OM,CC,CW
 
       integer              stage,nstage
       common /tstepstage/ stage,nstage
@@ -77,9 +90,9 @@ c---------------------------------------------------------------------
 !     common /partrkstuff/ xlocp, vlocp
 !     real xlocp(lpart,ldim), vlocp(lpart,ldim)
 
-      real              varsic(10),rho,phi,pres,cv,e_internal
+      real              rho,phi,pres,cv,e_internal
      $                 ,t0in,p0in,asnd,rgas,cp,mu,lambda,molarmass
-      common /nekuscmt/ varsic    ,rho,phi,pres,cv,e_internal
+      common /nekuscmt/ rho,phi,pres,cv,e_internal
      $                 ,t0in,p0in,asnd,rgas,cp,mu,lambda,molarmass
 ! let kond=udiff
 
