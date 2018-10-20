@@ -68,9 +68,8 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
      >                 ,nstate,toteq)
 
 ! now for stabilization. Local Lax-Friedrichs for Kennedy-Gruber, Pirozzoli
-      call fillq(isnd,csound,fatface(iwm),fatface(iflx))
-
-      call llf
+!     call fillq(isnd,csound,fatface(iwm),fatface(iflx))
+!     call llf(fatface(iwm+nfq*(isnd-1)),fatface(iwm+nfq*(iu1-1)),toteq)
 
 C> @}
 
@@ -81,6 +80,7 @@ C> @}
 
       subroutine rhoe_to_e(fatface,nf,ns)
 ! converts U5=phi*rho*E on faces to E=e+1/2*ui*ui. Kennedy-Gruber fluxes
+      include 'SIZE'
       include 'CMTDATA'
       real fatface(nf,ns)
       call invcol2(fatface(1,iu5),fatface(1,irho),nf)
@@ -88,7 +88,12 @@ C> @}
       return
       end
 
-      subroutine llf
+      subroutine llf(wavespeed,u,nflux)
+      include 'SIZE'
+      include 'GEOM'
+      include 'DG'
+
+!     real wavespeed(lx1*lz1
       return
       end
 
@@ -206,7 +211,7 @@ C> @}
       subroutine fsharp(z,flux,nstate,nflux)
       include 'SIZE'
       include 'INPUT'
-      include 'GEOM' ! for unx
+      include 'GEOM' ! for normal vectors at faces
       include 'CMTDATA' ! do we need this without outflsub?
       include 'CMTBCDATA'
       include 'TSTEP' ! for ifield?
