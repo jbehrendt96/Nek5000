@@ -1,22 +1,22 @@
 C> @file Dirichlet states for inflow boundary conditions
-      subroutine inflow(nvar,f,e,facew,wbc)
+      subroutine inflow(nvar,f,e,facew,flux)
       INCLUDE 'SIZE'
       INCLUDE 'INPUT'
       INCLUDE 'CMTBCDATA'
       integer nvar,f,e
       real facew(lx1,lz1,2*ldim,nelt,nvar)
-      real wbc(lx1,lz1,2*ldim,nelt,nvar)
+      real flux(lx1,lz1,2*ldim,nelt,nvar)
 
 ! JH021717 compare
 !     call inflow_rflu(nvar,f,e,facew,wbc)
-      call inflow_inviscid(nvar,f,e,facew,wbc)
+      call inflow_inviscid(nvar,f,e,facew,flux)
 
       return
       end
 
 !--------------------------------------------------------------------
 
-      subroutine inflow_rflu(nvar,f,e,facew,wbc)
+      subroutine inflow_rflu(nvar,f,e,facew,flux)
       include 'SIZE'
       include 'INPUT'
       include 'NEKUSE'

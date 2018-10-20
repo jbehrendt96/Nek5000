@@ -1,4 +1,3 @@
       real             max_mach,LENX,sigmabc,pinfty,betah,betav
-     >                    ,bmask(lx1,lz1,2*ldim,lelt)
       COMMON /bcscrt4/ max_mach,LENX
-     >               , sigmabc,pinfty,betah,betav,bmask
+     >               , sigmabc,pinfty,betah,betav

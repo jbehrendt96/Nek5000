@@ -113,7 +113,7 @@ C> Store it in res1
 ! not sure if viscous surface fluxes can live here yet
       common /CMTSURFLX/ flux(heresize),graduf(hdsize)
       real graduf
-      external rhoe_to_e
+      external trivial
 
       integer e,eq
       real wkj(lx1+lxd)
@@ -163,7 +163,7 @@ C> Restrict via \f$\mathbf{E}\f$ to get primitive and conserved variables
 C> on interior faces \f$\mathbf{U}^-\f$ and neighbor faces
 C> \f$\mathbf{U}^+\f$; store in CMTSURFLX
 !     call fluxes_full_field_old
-      call fluxes_full_field(rhoe_to_e)
+      call fluxes_full_field(trivial)
 
 C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       nstate=nqq

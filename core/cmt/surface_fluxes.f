@@ -42,21 +42,21 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
 ! just take volume-fraction-weighted density and energy
 ! until we can verify correct multiphase two-point fluxes
-      call faceu(1,fatface(iwm+nfq*(irho-1)))
+!     call faceu(1,fatface(iwm+nfq*(irho-1)))
+      call fillq(irho,vtrans,fatface(iwm),fatface(iflx))
       call fillq(iux, vx,    fatface(iwm),fatface(iflx))
       call fillq(iuy, vy,    fatface(iwm),fatface(iflx))
       call fillq(iuz, vz,    fatface(iwm),fatface(iflx))
       call fillq(ipr, pr,    fatface(iwm),fatface(iflx))
       call fillq(iph, phig,  fatface(iwm),fatface(iflx))
-      call faceu(toteq,fatface(iwm+nfq*(iu5-1)))
+      call fillq(iret,vtrans(1,1,1,1,icp),fatface(iwm),fatface(iflx))
 
-! fill Dirichlet BC and mask
-      call InviscidBC(fatface(iwm),fatface(iflx),nstate)
+      call InviscidBC(fatface(iwm),nstate,fatface(iflx))
 
 ! q- -> z-. Kennedy-Gruber, Pirozzoli, and most energy-
 !           conserving fluxes have p=q, so I just divide total energy by
 !           U1 here since Kennedy-Gruber needs E
-      call parameter_vector(fatface(iwm),nfq,nstate)
+!     call parameter_vector(fatface(iwm),nfq,nstate)
 
 ! z- -> z^, which is {{z}} for Kennedy-Gruber, Pirozzoli, and some parts
 !           of other energy-conserving fluxes.
@@ -64,9 +64,13 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
 ! z^ -> F#. Some parameter-vector stuff can go here too as long as it's all
 !           local to a given element.
-      call fsharp(fatface(iwm),fatface(iflx)
-     >                 ,nstate,toteq)
+      call fsharp(fatface(iwm),fatface(iflx),nstate,toteq)
 
+      i_cvars=iwm!(iu1-1)*nfq+1
+      do eq=1,toteq
+         call faceu(eq,fatface(i_cvars))
+         i_cvars=i_cvars+nfq
+      enddo
 ! now for stabilization. Local Lax-Friedrichs for Kennedy-Gruber, Pirozzoli
 !     call fillq(isnd,csound,fatface(iwm),fatface(iflx))
 !     call llf(fatface(iwm+nfq*(isnd-1)),fatface(iwm+nfq*(iu1-1)),toteq)
@@ -77,16 +81,6 @@ C> @}
       end
 
 !-----------------------------------------------------------------------
-
-      subroutine rhoe_to_e(fatface,nf,ns)
-! converts U5=phi*rho*E on faces to E=e+1/2*ui*ui. Kennedy-Gruber fluxes
-      include 'SIZE'
-      include 'CMTDATA'
-      real fatface(nf,ns)
-      call invcol2(fatface(1,iu5),fatface(1,irho),nf)
-      call invcol2(fatface(1,iu5),fatface(1,iph),nf)
-      return
-      end
 
       subroutine llf(wavespeed,u,nflux)
       include 'SIZE'
@@ -225,10 +219,10 @@ C> @}
      >     flux(lx1*lz1*2*ldim*nelt,nflux)
       
       parameter (lfq=lx1*lz1*2*ldim*lelt)
-      common /SCRNS/ scrf(lfq),scrg(lfq),scrh(lfq),fdot(lfq),
+      common /SCRNS/ scrf(lfq),scrg(lfq),scrh(lfq),fdot(lfq),jscr(lfq),
      >                 nx(lx1*lz1,2*ldim,lelt),ny(lx1*lz1,2*ldim,lelt),
      >                 nz(lx1*lz1,2*ldim,lelt)
-      real scrf,scrg,scrh,fdot,nx,ny,nz
+      real scrf,scrg,scrh,fdot,jscr,nx,ny,nz
       integer e,f
 
       nfaces=2*ldim
@@ -236,9 +230,11 @@ C> @}
       nf=nxz*nfaces*nelt
 
       call rzero(flux,nf*toteq)
-      call col3(jscr,jface,bmask,nf)
 ! I don't know what to do with phi, and this is my first guess
-      call col2(jscr,z(1,iph),nf)
+      call col3(jscr,jface,z(1,iph),nf)
+
+! boundary faces already have fluxes, so zero out jscr there
+      call BCmask(jscr)
 
       do e=1,nelt
          do f=1,nfaces

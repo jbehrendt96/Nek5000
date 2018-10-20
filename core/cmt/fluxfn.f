@@ -214,3 +214,7 @@ C> @}
       flx(5)=rq*eav+pav*qav
       return
       end
+
+      subroutine trivial
+      return
+      end
