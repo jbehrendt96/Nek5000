@@ -13,7 +13,6 @@ C> Determining rind state for Dirichlet boundary conditions
 !#endif
       include 'SIZE'
       include 'INPUT' ! do we need this?
-      include 'GEOM' ! diagnostic
       include 'CMTDATA' ! do we need this without outflsub?
 !     include 'TSTEP' ! for ifield?
       include 'DG'
@@ -46,21 +45,6 @@ C> Determining rind state for Dirichlet boundary conditions
 
       do e=1,nelt
       do f=1,nface
-! diagnostic
-            l=0
-            call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)
-            do k=k0,k1
-            do j=j0,j1
-            do i=i0,i1
-               l=l+1
-               write(50+nid,'(1p8e13.5)')
-     >         xm1(i,j,k,e),ym1(i,j,k,e),wminus(l,f,e,iph),
-     >         wminus(l,f,e,irho),wminus(l,f,e,iux),
-     >         wminus(l,f,e,iuy),wminus(l,f,e,iu5),wminus(l,f,e,ithm)
-            enddo
-            enddo
-            enddo
-! diagnostic
 
          cb=cbc(f,e,ifield)
          if (cb.ne.'E  '.and.cb.ne.'P  ') then ! cbc bndy

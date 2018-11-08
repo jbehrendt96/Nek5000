@@ -223,6 +223,8 @@ C> @}
 ! Routine to convert primitive variables on face to parameter vector for
 ! entropy-stable numerical fluxes consistent with volume fluxes.
 ! converts U5=phi*rho*E on faces to E=e+1/2*ui*ui. Kennedy-Gruber fluxes
+! consider putting indices for quantities (iu5, irho, etc.) in the argument
+! list instead of including CMTDATA
       include 'SIZE'
       include 'CMTDATA'
       real fatface(nf,ns)

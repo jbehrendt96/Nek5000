@@ -49,14 +49,22 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       call fillq(iuz, vz,    fatface(iwm),fatface(iflx))
       call fillq(ipr, pr,    fatface(iwm),fatface(iflx))
       call fillq(iph, phig,  fatface(iwm),fatface(iflx))
-      call fillq(iret,vtrans(1,1,1,1,icp),fatface(iwm),fatface(iflx))
+! need total energy, not internal
+!     call fillq(iu5, vtrans(1,1,1,1,icp),fatface(iwm),fatface(iflx))
+      i_cvars=(iu5-1)*nfq+1
+      call faceu(toteq,fatface(i_cvars))
+      call invcol2(fatface(i_cvars),fatface(iwm+nfq*(iph-1)),nfq)
+
+! diagnostic
+      call fillq(ithm,t,     fatface(iwm),fatface(iflx))
+! diagnostic
 
       call InviscidBC(fatface(iwm),nstate,fatface(iflx))
 
 ! q- -> z-. Kennedy-Gruber, Pirozzoli, and most energy-
 !           conserving fluxes have p=q, so I just divide total energy by
 !           U1 here since Kennedy-Gruber needs E
-!     call parameter_vector(fatface(iwm),nfq,nstate)
+      call parameter_vector(fatface(iwm),nfq,nstate)
 
 ! z- -> z^, which is {{z}} for Kennedy-Gruber, Pirozzoli, and some parts
 !           of other energy-conserving fluxes.
@@ -138,15 +146,9 @@ C> @}
 
       subroutine dg_face_avg(mine,nf,nstate,handle)
 
-! JH060414 if we ever want to be more intelligent about who gets what,
-!          who gives what and who does what, this is the place where all
-!          that is done. At the very least, gs_op may need the transpose
-!          flag set to 1. Who knows. Everybody duplicates everything for
-!          now.
-! JH070714 figure out gs_op_fields, many, vec, whatever (and the
-!          corresponding setup) to get this done for the transposed
-!          ordering of state variables. I want variable innermost, not
-!          grid point.
+! JH110818 A lot of entropy-stable fluxes have a product of averages.
+!          mine: starting parameter vector of nstate quantities,
+!                quantity outermost, on piles of faces with nf points
 
       integer handle,nf,nstate ! intent(in)
       real mine(*)
@@ -301,6 +303,23 @@ C> @}
       if (if3d) call addcol4(flux(1,5),fdot,scrh,nz,nf)
       call col2(flux(1,5),jscr,nf)
 
+! diagnostic
+! diagnostic
+            l=0
+      do e=1,nelt
+         do f=1,nfaces
+            call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)
+            do k=k0,k1
+            do j=j0,j1
+            do i=i0,i1
+               l=l+1
+               write(70+nid,'(1p7e13.5)')
+     >        xm1(i,j,k,e),ym1(i,j,k,e),(flux(l,m),m=1,toteq)
+            enddo
+            enddo
+            enddo
+            enddo
+      enddo
 ! diagnostic
       call exitt
 
