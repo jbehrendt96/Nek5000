@@ -218,3 +218,15 @@ C> @}
       subroutine trivial
       return
       end
+
+      subroutine rhoe_to_e(fatface,nf,ns)
+! Routine to convert primitive variables on face to parameter vector for
+! entropy-stable numerical fluxes consistent with volume fluxes.
+! converts U5=phi*rho*E on faces to E=e+1/2*ui*ui. Kennedy-Gruber fluxes
+      include 'SIZE'
+      include 'CMTDATA'
+      real fatface(nf,ns)
+      call invcol2(fatface(1,iu5),fatface(1,irho),nf)
+      call invcol2(fatface(1,iu5),fatface(1,iph),nf)
+      return
+      end

@@ -16,7 +16,7 @@ C> @file Dirichlet states for inflow boundary conditions
 
 !--------------------------------------------------------------------
 
-      subroutine inflow_rflu(nvar,f,e,facew,flux)
+      subroutine inflow_rflu(nvar,f,e,facew)!,flux)
       include 'SIZE'
       include 'INPUT'
       include 'NEKUSE'

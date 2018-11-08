@@ -66,11 +66,11 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 !           local to a given element.
       call fsharp(fatface(iwm),fatface(iflx),nstate,toteq)
 
-      i_cvars=iwm!(iu1-1)*nfq+1
-      do eq=1,toteq
-         call faceu(eq,fatface(i_cvars))
-         i_cvars=i_cvars+nfq
-      enddo
+!     i_cvars=iwm!(iu1-1)*nfq+1
+!     do eq=1,toteq
+!        call faceu(eq,fatface(i_cvars))
+!        i_cvars=i_cvars+nfq
+!     enddo
 ! now for stabilization. Local Lax-Friedrichs for Kennedy-Gruber, Pirozzoli
 !     call fillq(isnd,csound,fatface(iwm),fatface(iflx))
 !     call llf(fatface(iwm+nfq*(isnd-1)),fatface(iwm+nfq*(iu1-1)),toteq)
@@ -207,7 +207,6 @@ C> @}
       include 'INPUT'
       include 'GEOM' ! for normal vectors at faces
       include 'CMTDATA' ! do we need this without outflsub?
-      include 'CMTBCDATA'
       include 'TSTEP' ! for ifield?
       include 'DG'
 
@@ -234,13 +233,27 @@ C> @}
       call col3(jscr,jface,z(1,iph),nf)
 
 ! boundary faces already have fluxes, so zero out jscr there
-      call BCmask(jscr)
+      call bcmask_cmt(jscr)
 
+            l=0
       do e=1,nelt
          do f=1,nfaces
             call copy(nx(1,f,e),unx(1,1,f,e),nxz)
             call copy(ny(1,f,e),uny(1,1,f,e),nxz)
             if(if3d) call copy(nz(1,f,e),unz(1,1,f,e),nxz)
+! diagnostic
+            call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)
+            do k=k0,k1
+            do j=j0,j1
+            do i=i0,i1
+               l=l+1
+               write(60+nid,'(1p8e13.5)')
+     >         xm1(i,j,k,e),ym1(i,j,k,e),z(l,iph),z(l,irho),z(l,iux),
+     >         z(l,iuy),z(l,iu5),z(l,ithm)
+            enddo
+            enddo
+            enddo
+! diagnostic
          enddo
       enddo
 
@@ -287,6 +300,9 @@ C> @}
       call addcol4(flux(1,5),fdot,scrg,ny,nf)
       if (if3d) call addcol4(flux(1,5),fdot,scrh,nz,nf)
       call col2(flux(1,5),jscr,nf)
+
+! diagnostic
+      call exitt
 
       return
       end
