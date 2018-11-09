@@ -55,9 +55,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       call faceu(toteq,fatface(i_cvars))
       call invcol2(fatface(i_cvars),fatface(iwm+nfq*(iph-1)),nfq)
 
-! diagnostic
-      call fillq(ithm,t,     fatface(iwm),fatface(iflx))
-! diagnostic
+      call rzero(fatface(iflx),nfq*toteq)
 
       call InviscidBC(fatface(iwm),nstate,fatface(iflx))
 
@@ -205,6 +203,7 @@ C> @}
 !-------------------------------------------------------------------------------
 
       subroutine fsharp(z,flux,nstate,nflux)
+! Kennedy Gruber style. Need to label this and put it in fluxfn.f
       include 'SIZE'
       include 'INPUT'
       include 'GEOM' ! for normal vectors at faces
@@ -230,32 +229,16 @@ C> @}
       nxz=lx1*lz1
       nf=nxz*nfaces*nelt
 
-      call rzero(flux,nf*toteq)
-! I don't know what to do with phi, and this is my first guess
-      call col3(jscr,jface,z(1,iph),nf)
+! I don't know what to do with volume fraction phi, and this is my first guess
+      call col3(jscr,jface,z(1,iph),nf) ! Jscr=JA*{{\phi_g}}
 
 ! boundary faces already have fluxes, so zero out jscr there
       call bcmask_cmt(jscr)
 
-            l=0
       do e=1,nelt
          do f=1,nfaces
             call copy(nx(1,f,e),unx(1,1,f,e),nxz)
             call copy(ny(1,f,e),uny(1,1,f,e),nxz)
-            if(if3d) call copy(nz(1,f,e),unz(1,1,f,e),nxz)
-! diagnostic
-            call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)
-            do k=k0,k1
-            do j=j0,j1
-            do i=i0,i1
-               l=l+1
-               write(60+nid,'(1p8e13.5)')
-     >         xm1(i,j,k,e),ym1(i,j,k,e),z(l,iph),z(l,irho),z(l,iux),
-     >         z(l,iuy),z(l,iu5),z(l,ithm)
-            enddo
-            enddo
-            enddo
-! diagnostic
          enddo
       enddo
 
@@ -263,37 +246,44 @@ C> @}
       call col3(scrf,z(1,irho),z(1,iux),nf)
       call col3(scrg,z(1,irho),z(1,iuy),nf)
       if (if3d) then
+         do e=1,nelt
+         do f=1,nfaces
+            call copy(nz(1,f,e),unz(1,1,f,e),nxz)
+         enddo
+         enddo
          call col3(scrh,z(1,irho),z(1,iuz),nf)
-         call vdot3(fdot,scrf,nx,scrg,ny,scrh,nz,nf)
+         call vdot3(fdot,scrf,scrg,scrh,nx,ny,nz,nf)
       else
-         call vdot2(fdot,scrf,nx,scrg,ny,nf)
+         call vdot2(fdot,scrf,scrg,nx,ny,nf)
       endif
       call add2col2(flux(1,1),fdot,jscr,nf)
 
 ! x-momentum
-      call col3(fdot,scrf,z(1,iux),nf)
-      call add2(fdot,z(1,ipr),nf)
-      call col2(fdot,nx,nf)
-      call addcol4(fdot,scrf,z(1,iuy),ny,nf)
-      if (if3d) call addcol4(fdot,scrf,z(1,iuz),nz,nf)
+      call col3(fdot,scrf,z(1,iux),nf) ! F={{rho}}{{u}}{{u}}
+      call add2(fdot,z(1,ipr),nf) ! F+={{p}}
+      call col2(fdot,nx,nf) ! F contribution to f~
+      call addcol4(fdot,scrf,z(1,iuy),ny,nf) ! G={{rho}}{{v}}{{u}} .ny -> f~
+      if (if3d) call addcol4(fdot,scrf,z(1,iuz),nz,nf) ! H={{rho}}{{w}}{{u}} .nz -> f~
       call add2col2(flux(1,2),fdot,jscr,nf)
 
 ! y-momentum
-      call col3(fdot,scrg,z(1,iuy),nf)
-      call add2(fdot,z(1,ipr),nf)
+      call col3(fdot,scrg,z(1,iuy),nf) ! G={{rho}}{{v}}{{v}}
+      call add2(fdot,z(1,ipr),nf) ! G+={{p}}
       call col2(fdot,ny,nf)
       call addcol4(fdot,scrg,z(1,iux),nx,nf)
-      if (if3d) call addcol4(fdot,scrg,z(1,iuz),nz,nf)
-      call add2col2(flux(1,3),fdot,jscr,nf)
 
-! z-momentum
       if (if3d) then
+         call addcol4(fdot,scrg,z(1,iuz),nz,nf)
+         call add2col2(flux(1,3),fdot,jscr,nf)
+! z-momentum
          call col3(fdot,scrh,z(1,iuz),nf)
          call add2(fdot,z(1,ipr),nf)
          call col2(fdot,nz,nf)
          call addcol4(fdot,scrh,z(1,iux),nx,nf)
          call addcol4(fdot,scrh,z(1,iuy),ny,nf)
          call add2col2(flux(1,4),fdot,jscr,nf)
+      else ! 2D only. couldn't resist deleting one if(if3d)
+         call add2col2(flux(1,3),fdot,jscr,nf)
       endif
 
 ! energy {{rho}}({{E}}+{{p}}){{u}}.n
@@ -302,26 +292,6 @@ C> @}
       call addcol4(flux(1,5),fdot,scrg,ny,nf)
       if (if3d) call addcol4(flux(1,5),fdot,scrh,nz,nf)
       call col2(flux(1,5),jscr,nf)
-
-! diagnostic
-! diagnostic
-            l=0
-      do e=1,nelt
-         do f=1,nfaces
-            call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)
-            do k=k0,k1
-            do j=j0,j1
-            do i=i0,i1
-               l=l+1
-               write(70+nid,'(1p7e13.5)')
-     >        xm1(i,j,k,e),ym1(i,j,k,e),(flux(l,m),m=1,toteq)
-            enddo
-            enddo
-            enddo
-            enddo
-      enddo
-! diagnostic
-      call exitt
 
       return
       end
@@ -414,21 +384,6 @@ C> @}
 !          a good flux for weak BC.
 ! JH111715 now with dealiased surface integrals. I am too lazy to write
 !          something better
-
-! diagnostic
-!        if (cbc(f,e,ifield).eq.'v  '.or.cbc(f,e,ifield).eq.'V  ')then
-!        if (istep .eq. 1000) then
-!           do i=1,nxz
-!              write(10+istep,'(2i3,a3,16e15.7)') e,f,cbc(f,e,ifield),
-!    .         wminus(i,f,e,irho),wplus(i,f,e,irho),
-!    .      wminus(i,f,e,iux), wplus(i,f,e,iux), wminus(i,f,e,iuy),
-!    .      wplus(i,f,e,iuy), wminus(i,f,e,ipr), wplus(i,f,e,ipr),
-!    .      wminus(i,f,e,ithm), wplus(i,f,e,ithm), wminus(i,f,e,isnd),
-!    .      wplus(i,f,e,isnd), wminus(i,f,e,icpf), wplus(i,f,e,icpf),
-!    .      wminus(i,f,e,iph), wplus(i,f,e,iph)
-!           enddo
-!        endif
-! diagnostic
 
          if (lxd.gt.lx1) then
             call map_faced(nx,unx(1,1,f,e),lx1,lxd,fdim,0)
