@@ -201,17 +201,17 @@ C> @}
       rav=0.5*(rl +rr )
       pav=0.5*(pl +pr )
 !     eav=0.5*(ul(5)/rl+ur(5)/rr)
-      eav=0.5*(ul(5)/ul(1)+ur(5)/ur(1))
+      eav=0.5*(ul(5)/ul(1)+ur(5)/ur(1)) !{{E}}
       qav=0.0
       do j=1,ldim
-         qav=qav+uav(j)*jav(j)
+         qav=qav+uav(j)*jav(j) ! {{u}}.{{Ja}}
       enddo
       rq=rav*qav
       flx(1)=rq
       flx(2)=rq*uav(1)+jav(1)*pav
       flx(3)=rq*uav(2)+jav(2)*pav
       flx(4)=rq*uav(3)+jav(3)*pav
-      flx(5)=rq*eav+pav*qav
+      flx(5)=rq*eav+pav*qav ! ({{rho}}{{E}}+{{p}}){{u}}
       return
       end
 

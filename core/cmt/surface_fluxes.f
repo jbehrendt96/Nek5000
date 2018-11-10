@@ -205,11 +205,9 @@ C> @}
       subroutine fsharp(z,flux,nstate,nflux)
 ! Kennedy Gruber style. Need to label this and put it in fluxfn.f
       include 'SIZE'
-      include 'INPUT'
+      include 'INPUT' ! for if3d
       include 'GEOM' ! for normal vectors at faces
-      include 'CMTDATA' ! do we need this without outflsub?
-      include 'TSTEP' ! for ifield?
-      include 'DG'
+      include 'CMTDATA' ! for jface
 
 ! ==============================================================================
 ! Arguments
@@ -286,12 +284,19 @@ C> @}
          call add2col2(flux(1,3),fdot,jscr,nf)
       endif
 
-! energy {{rho}}({{E}}+{{p}}){{u}}.n
-      call add3(fdot,z(1,iu5),z(1,ipr),nf) ! NOT U5 anymore. actually E
-      call addcol4(flux(1,5),fdot,scrf,nx,nf)
-      call addcol4(flux(1,5),fdot,scrg,ny,nf)
-      if (if3d) call addcol4(flux(1,5),fdot,scrh,nz,nf)
-      call col2(flux(1,5),jscr,nf)
+! energy ({{rho}}{{E}}+{{p}}){{u}}.n
+      call col2(scrf,z(1,iu5),nf)
+      call col2(scrg,z(1,iu5),nf)
+      call add2col2(scrf,z(1,iux),z(1,ipr),nf)
+      call add2col2(scrg,z(1,iuy),z(1,ipr),nf)
+      if (if3d) then
+         call col2(scrh,z(1,iu5),nf)
+         call add2(scrh,z(1,iuz),z(1,ipr),nf)
+         call vdot3(fdot,scrf,scrg,scrh,nx,ny,nz,nf)
+      else
+         call vdot2(fdot,scrf,scrg,nx,ny,nf)
+      endif
+      call add2col2(flux(1,5),fdot,jscr,nf)
 
       return
       end
