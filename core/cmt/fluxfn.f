@@ -1,6 +1,41 @@
 C> @file fluxfn.f Riemann solvers, other rocflu miscellany and two-point fluxes
-! ******************************************************************************
-!
+      SUBROUTINE KGrotFluxFunction(ntot,nm,rl,ul,vl,wl,pl,
+     >                         al,tl,rr,ur,vr,wr,pr,ar,tr,flx,el,er)
+! JH111218 sanity check of order of operations in two-point form of surface fluxes
+!          contravariant (like in the papers) should match rotated (like in fluxo)
+!          This is the rotated form of the flux. I don't want to rely on it because
+!          the contravariant form is formally correct and far cheaper.
+! ==============================================================================
+! Arguments
+! ==============================================================================
+      integer ntot
+      REAL al(ntot),ar(ntot),nm(ntot),
+     >     pl(ntot),pr(ntot),rl(ntot),rr(ntot),ul(ntot),
+     >     ur(ntot),vl(ntot),vr(ntot),wl(ntot),wr(ntot),el(ntot),
+     >     er(ntot),tl(ntot),tr(ntot)! INTENT(IN) ::
+      REAL flx(ntot,5)
+! Locals
+      real rav,uav(3),pav,eav,jav(3)
+
+      do i=1,ntot
+         rav=0.5*(rl(i)+rr(i))
+         pav=0.5*(pl(i)+pr(i))
+         uav(1)=0.5*(ul(i)+ur(i))
+         uav(2)=0.5*(vl(i)+vr(i))
+         uav(3)=0.5*(wl(i)+wr(i))
+         eav=0.5*(el(i)+er(i))
+         flx(i,1)=rav*uav(1)
+         flx(i,2)=flx(i,1)*uav(1)+pav
+         flx(i,3)=flx(i,1)*uav(2)
+         flx(i,4)=flx(i,1)*uav(3)
+         flx(i,5)=flx(i,1)*eav+pav*uav(1)
+      enddo
+      do j=1,5
+         call col2(flx(1,j),nm,ntot)
+      enddo
+      return
+      end
+
 ! Purpose: Compute convective fluxes using AUSM+ scheme.
 !
 ! Description: None.
@@ -178,6 +213,71 @@ C> @}
       end
 
 !-----------------------------------------------------------------------
+
+      subroutine llf_euler(wminus,uplus,flux,nstate) ! fstab
+! local Lax-Friedrichs done for the Euler equations (i.e., wave speed is
+! hardcoded for the gas dynamics)
+      include 'SIZE'
+      include 'INPUT'
+      include 'GEOM'
+      include 'CMTDATA'
+      include 'DG'
+
+      real wminus(lx1*lz1*2*ldim*nelt,*)
+      real uplus(lx1*lz1*2*ldim*nelt,nstate)! really should be toteq, but I haven't changed iu1 yet
+      real flux(lx1*lz1*2*ldim*nelt,toteq) ! intent(inout); incremented
+
+      parameter (lfq=lx1*lz1*2*ldim*lelt)
+      common /SCRNS/ nx(lx1*lz1,2*ldim,lelt),ny(lx1*lz1,2*ldim,lelt),
+     >               nz(lx1*lz1,2*ldim,lelt),jscr(lfq)
+      real nx,ny,nz,jscr
+
+      integer e,f,eq
+
+      nfaces=2*ldim
+      nxz=lx1*lz1
+      nf=nxz*nfaces*nelt
+
+      do e=1,nelt
+         do f=1,nfaces
+            call copy(nx(1,f,e),unx(1,1,f,e),nxz)
+            call copy(ny(1,f,e),uny(1,1,f,e),nxz)
+            if (if3d) call copy(nz(1,f,e),unz(1,1,f,e),nxz)
+         enddo
+      enddo
+
+! overwrite wminus(:,isnd) with max wave speed local to each GLL point.
+! use uplus as scratch for awhile
+      if (if3d) then
+         call vdot3(uplus,wminus(1,iux),wminus(1,iuy),wminus(1,iuz),
+     >              nx,ny,nz,nf)
+      else
+         call vdot2(uplus,wminus(1,iux),wminus(1,iuy),nx,ny,nf)
+      endif
+      do i=1,nf
+         wminus(i,isnd)=0.5*(abs(uplus(i,1))+wminus(i,isnd))
+      enddo
+! get max
+      call fgslib_gs_op(dg_hndl,wminus(1,isnd),1,4,0)
+
+! do BC twice? not sure.
+      call copy(jscr,jface,nf)
+      call bcmask_cmt(jscr)
+
+! now get flux from jump in the conserved variable one equation at a time
+      do eq=1,toteq
+         call faceu(eq,wminus(1,iu5)) ! peel U once or twice (thrice)?
+         call face_state_commo(wminus(1,iu5),uplus,nf,1,dg_hndl)
+         call sub2(uplus,wminus(1,iu5),nf)
+! might math.f this someday
+         do i=1,nf
+            flux(i,eq)=flux(i,eq)-wminus(i,isnd)*jscr(i)*uplus(i,1)
+         enddo
+      enddo
+
+      return
+      end
+!-----------------------------------------------------------------------
 ! JH060618 Hooray for two-point fluxes! Needed for entropy-conserving DGSEM
 !          in CMT-nek. These are volume functions here. calls to GS for
 !          surface fluxes need dedicated subroutines.
@@ -215,6 +315,111 @@ C> @}
       return
       end
 
+      subroutine kennedygruber_vec(z,flux,nstate,nflux) ! fsharp
+! JH111218 Kennedy-Gruber fluxes, but acting on vectors of face nodes
+!  instead of two arbitrary points. Gratuitously assuming watertight geometry.
+      include 'SIZE'
+      include 'INPUT' ! for if3d
+      include 'GEOM' ! for normal vectors at faces
+      include 'CMTDATA' ! for jface
+
+! ==============================================================================
+! Arguments
+! ==============================================================================
+      integer nstate,nflux
+      real z(lx1*lz1*2*ldim*nelt,nstate),
+     >     flux(lx1*lz1*2*ldim*nelt,nflux)
+      
+      parameter (lfq=lx1*lz1*2*ldim*lelt)
+      common /SCRNS/ scrf(lfq),scrg(lfq),scrh(lfq),fdot(lfq),jscr(lfq),
+     >                 nx(lx1*lz1,2*ldim,lelt),ny(lx1*lz1,2*ldim,lelt),
+     >                 nz(lx1*lz1,2*ldim,lelt)
+      real scrf,scrg,scrh,fdot,jscr,nx,ny,nz
+      integer e,f
+
+!-----------------------------------------------------------------------
+! I need to get this stuff out of this routine and one level up
+!-----------------------------------------------------------------------
+      nfaces=2*ldim
+      nxz=lx1*lz1
+      nf=nxz*nfaces*nelt
+
+! I don't know what to do with volume fraction phi, and this is my first guess
+      call col3(jscr,jface,z(1,iph),nf) ! Jscr=JA*{{\phi_g}}
+
+! boundary faces already have fluxes, so zero out jscr there
+      call bcmask_cmt(jscr)
+
+      do e=1,nelt
+         do f=1,nfaces
+            call copy(nx(1,f,e),unx(1,1,f,e),nxz)
+            call copy(ny(1,f,e),uny(1,1,f,e),nxz)
+            if (if3d) call copy(nz(1,f,e),unz(1,1,f,e),nxz)
+         enddo
+      enddo
+!-----------------------------------------------------------------------
+! I need to get that stuff out of this routine and one level up
+!-----------------------------------------------------------------------
+
+! mass. scrF={{rho}}{{u}}, scrG={{rho}}{{v}}, scrH={{rho}}{{w}}
+      call col3(scrf,z(1,irho),z(1,iux),nf)
+      call col3(scrg,z(1,irho),z(1,iuy),nf)
+      if (if3d) then
+         call col3(scrh,z(1,irho),z(1,iuz),nf)
+         call vdot3(fdot,scrf,scrg,scrh,nx,ny,nz,nf)
+      else
+         call vdot2(fdot,scrf,scrg,nx,ny,nf)
+      endif
+      call add2col2(flux(1,1),fdot,jscr,nf)
+
+! x-momentum
+      call col3(fdot,scrf,z(1,iux),nf) ! F={{rho}}{{u}}{{u}}
+      call add2(fdot,z(1,ipr),nf) ! F+={{p}}
+      call col2(fdot,nx,nf) ! F contribution to f~
+      call addcol4(fdot,scrf,z(1,iuy),ny,nf) ! G={{rho}}{{v}}{{u}} .ny -> f~
+      if (if3d) call addcol4(fdot,scrf,z(1,iuz),nz,nf) ! H={{rho}}{{w}}{{u}} .nz -> f~
+      call add2col2(flux(1,2),fdot,jscr,nf)
+
+! y-momentum
+      call col3(fdot,scrg,z(1,iuy),nf) ! G={{rho}}{{v}}{{v}}
+      call add2(fdot,z(1,ipr),nf) ! G+={{p}}
+      call col2(fdot,ny,nf)
+      call addcol4(fdot,scrg,z(1,iux),nx,nf)
+
+      if (if3d) then
+         call addcol4(fdot,scrg,z(1,iuz),nz,nf)
+         call add2col2(flux(1,3),fdot,jscr,nf)
+! z-momentum
+         call col3(fdot,scrh,z(1,iuz),nf)
+         call add2(fdot,z(1,ipr),nf)
+         call col2(fdot,nz,nf)
+         call addcol4(fdot,scrh,z(1,iux),nx,nf)
+         call addcol4(fdot,scrh,z(1,iuy),ny,nf)
+         call add2col2(flux(1,4),fdot,jscr,nf)
+      else ! 2D only. couldn't resist deleting one if(if3d)
+         call add2col2(flux(1,3),fdot,jscr,nf)
+      endif
+
+! energy ({{rho}}{{E}}+{{p}}){{u}}.n
+      call col2(scrf,z(1,iu5),nf)
+      call col2(scrg,z(1,iu5),nf)
+      call add2col2(scrf,z(1,iux),z(1,ipr),nf)
+      call add2col2(scrg,z(1,iuy),z(1,ipr),nf)
+      if (if3d) then
+         call col2(scrh,z(1,iu5),nf)
+         call add2(scrh,z(1,iuz),z(1,ipr),nf)
+         call vdot3(fdot,scrf,scrg,scrh,nx,ny,nz,nf)
+      else
+         call vdot2(fdot,scrf,scrg,nx,ny,nf)
+      endif
+      call add2col2(flux(1,5),fdot,jscr,nf)
+
+      return
+      end
+
+!-----------------------------------------------------------------------
+! Parameter vectors. need to work out some way of specifying indices
+! instead of hardcoding them
       subroutine trivial
       return
       end
@@ -222,7 +427,7 @@ C> @}
       subroutine rhoe_to_e(fatface,nf,ns)
 ! Routine to convert primitive variables on face to parameter vector for
 ! entropy-stable numerical fluxes consistent with volume fluxes.
-! converts U5=phi*rho*E on faces to E=e+1/2*ui*ui. Kennedy-Gruber fluxes
+! converts U5=phi*rho*E on faces to E=e+1/2*ui*ui for Kennedy-Gruber fluxes
 ! consider putting indices for quantities (iu5, irho, etc.) in the argument
 ! list instead of including CMTDATA
       include 'SIZE'

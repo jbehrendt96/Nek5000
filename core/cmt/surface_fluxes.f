@@ -4,7 +4,7 @@ C> \ingroup isurf
 C> @{
 C> Restrict and copy face data and compute inviscid numerical flux 
 C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
-      subroutine fluxes_full_field(parameter_vector)
+      subroutine fluxes_full_field(fstab,parameter_vector,fsharp)
 !-----------------------------------------------------------------------
 ! JH060314 First, compute face fluxes now that we have the primitive variables
 ! JH091514 renamed from "surface_fluxes_inviscid" since it handles all fluxes
@@ -27,7 +27,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 !          method of memory management that is more transparent to me.
       common /CMTSURFLX/ fatface(heresize),notyet(hdsize)
       real fatface,notyet
-      external parameter_vector
+      external fstab,parameter_vector,fsharp
       integer eq
       character*32 cname
       nfq=lx1*lz1*2*ldim*nelt
@@ -37,30 +37,36 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       iwp =iwm+nstate*nfq
       iflx=iwp+nstate*nfq
 
+      call rzero(fatface(iflx),nfq*toteq)
+
 ! fill parameter vector z for two-point flux applied at faces
 ! start with primitive variables at faces
 
-! just take volume-fraction-weighted density and energy
+! just multipy by {{phi}}
 ! until we can verify correct multiphase two-point fluxes
 !     call faceu(1,fatface(iwm+nfq*(irho-1)))
-      call fillq(irho,vtrans,fatface(iwm),fatface(iflx))
-      call fillq(iux, vx,    fatface(iwm),fatface(iflx))
-      call fillq(iuy, vy,    fatface(iwm),fatface(iflx))
-      call fillq(iuz, vz,    fatface(iwm),fatface(iflx))
-      call fillq(ipr, pr,    fatface(iwm),fatface(iflx))
-      call fillq(iph, phig,  fatface(iwm),fatface(iflx))
+      call fillq(iux, vx,    fatface(iwm),fatface(iwp))
+      call fillq(iuy, vy,    fatface(iwm),fatface(iwp))
+      call fillq(iuz, vz,    fatface(iwm),fatface(iwp))
+      call fillq(iph, phig,  fatface(iwm),fatface(iwp))
+
+! stabilization first.
+      call fillq(isnd,csound,fatface(iwm),fatface(iwp))
+      call fstab(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
+
 ! need total energy, not internal
-!     call fillq(iu5, vtrans(1,1,1,1,icp),fatface(iwm),fatface(iflx))
       i_cvars=(iu5-1)*nfq+1
-      call faceu(toteq,fatface(i_cvars))
+!     call faceu(toteq,fatface(i_cvars)) ! should persist from llf_euler
       call invcol2(fatface(i_cvars),fatface(iwm+nfq*(iph-1)),nfq)
 
-      call rzero(fatface(iflx),nfq*toteq)
 
+      call fillq(irho,vtrans,fatface(iwm),fatface(iwp))
+      call fillq(ipr, pr,    fatface(iwm),fatface(iwp))
+! Now do all fluxes for all boundaries, both F# and stabilized
       call InviscidBC(fatface(iwm),nstate,fatface(iflx))
 
 ! q- -> z-. Kennedy-Gruber, Pirozzoli, and most energy-
-!           conserving fluxes have p=q, so I just divide total energy by
+!           conserving fluxes have z=q, so I just divide total energy by
 !           U1 here since Kennedy-Gruber needs E
       call parameter_vector(fatface(iwm),nfq,nstate)
 
@@ -77,23 +83,9 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 !        call faceu(eq,fatface(i_cvars))
 !        i_cvars=i_cvars+nfq
 !     enddo
-! now for stabilization. Local Lax-Friedrichs for Kennedy-Gruber, Pirozzoli
-!     call fillq(isnd,csound,fatface(iwm),fatface(iflx))
-!     call llf(fatface(iwm+nfq*(isnd-1)),fatface(iwm+nfq*(iu1-1)),toteq)
 
 C> @}
 
-      return
-      end
-
-!-----------------------------------------------------------------------
-
-      subroutine llf(wavespeed,u,nflux)
-      include 'SIZE'
-      include 'GEOM'
-      include 'DG'
-
-!     real wavespeed(lx1*lz1
       return
       end
 
@@ -201,105 +193,6 @@ C> @}
       end
 
 !-------------------------------------------------------------------------------
-
-      subroutine fsharp(z,flux,nstate,nflux)
-! Kennedy Gruber style. Need to label this and put it in fluxfn.f
-      include 'SIZE'
-      include 'INPUT' ! for if3d
-      include 'GEOM' ! for normal vectors at faces
-      include 'CMTDATA' ! for jface
-
-! ==============================================================================
-! Arguments
-! ==============================================================================
-      integer nstate,nflux
-      real z(lx1*lz1*2*ldim*nelt,nstate),
-     >     flux(lx1*lz1*2*ldim*nelt,nflux)
-      
-      parameter (lfq=lx1*lz1*2*ldim*lelt)
-      common /SCRNS/ scrf(lfq),scrg(lfq),scrh(lfq),fdot(lfq),jscr(lfq),
-     >                 nx(lx1*lz1,2*ldim,lelt),ny(lx1*lz1,2*ldim,lelt),
-     >                 nz(lx1*lz1,2*ldim,lelt)
-      real scrf,scrg,scrh,fdot,jscr,nx,ny,nz
-      integer e,f
-
-      nfaces=2*ldim
-      nxz=lx1*lz1
-      nf=nxz*nfaces*nelt
-
-! I don't know what to do with volume fraction phi, and this is my first guess
-      call col3(jscr,jface,z(1,iph),nf) ! Jscr=JA*{{\phi_g}}
-
-! boundary faces already have fluxes, so zero out jscr there
-      call bcmask_cmt(jscr)
-
-      do e=1,nelt
-         do f=1,nfaces
-            call copy(nx(1,f,e),unx(1,1,f,e),nxz)
-            call copy(ny(1,f,e),uny(1,1,f,e),nxz)
-         enddo
-      enddo
-
-! mass. scrF={{rho}}{{u}}, scrG={{rho}}{{v}}, scrH={{rho}}{{w}}
-      call col3(scrf,z(1,irho),z(1,iux),nf)
-      call col3(scrg,z(1,irho),z(1,iuy),nf)
-      if (if3d) then
-         do e=1,nelt
-         do f=1,nfaces
-            call copy(nz(1,f,e),unz(1,1,f,e),nxz)
-         enddo
-         enddo
-         call col3(scrh,z(1,irho),z(1,iuz),nf)
-         call vdot3(fdot,scrf,scrg,scrh,nx,ny,nz,nf)
-      else
-         call vdot2(fdot,scrf,scrg,nx,ny,nf)
-      endif
-      call add2col2(flux(1,1),fdot,jscr,nf)
-
-! x-momentum
-      call col3(fdot,scrf,z(1,iux),nf) ! F={{rho}}{{u}}{{u}}
-      call add2(fdot,z(1,ipr),nf) ! F+={{p}}
-      call col2(fdot,nx,nf) ! F contribution to f~
-      call addcol4(fdot,scrf,z(1,iuy),ny,nf) ! G={{rho}}{{v}}{{u}} .ny -> f~
-      if (if3d) call addcol4(fdot,scrf,z(1,iuz),nz,nf) ! H={{rho}}{{w}}{{u}} .nz -> f~
-      call add2col2(flux(1,2),fdot,jscr,nf)
-
-! y-momentum
-      call col3(fdot,scrg,z(1,iuy),nf) ! G={{rho}}{{v}}{{v}}
-      call add2(fdot,z(1,ipr),nf) ! G+={{p}}
-      call col2(fdot,ny,nf)
-      call addcol4(fdot,scrg,z(1,iux),nx,nf)
-
-      if (if3d) then
-         call addcol4(fdot,scrg,z(1,iuz),nz,nf)
-         call add2col2(flux(1,3),fdot,jscr,nf)
-! z-momentum
-         call col3(fdot,scrh,z(1,iuz),nf)
-         call add2(fdot,z(1,ipr),nf)
-         call col2(fdot,nz,nf)
-         call addcol4(fdot,scrh,z(1,iux),nx,nf)
-         call addcol4(fdot,scrh,z(1,iuy),ny,nf)
-         call add2col2(flux(1,4),fdot,jscr,nf)
-      else ! 2D only. couldn't resist deleting one if(if3d)
-         call add2col2(flux(1,3),fdot,jscr,nf)
-      endif
-
-! energy ({{rho}}{{E}}+{{p}}){{u}}.n
-      call col2(scrf,z(1,iu5),nf)
-      call col2(scrg,z(1,iu5),nf)
-      call add2col2(scrf,z(1,iux),z(1,ipr),nf)
-      call add2col2(scrg,z(1,iuy),z(1,ipr),nf)
-      if (if3d) then
-         call col2(scrh,z(1,iu5),nf)
-         call add2(scrh,z(1,iuz),z(1,ipr),nf)
-         call vdot3(fdot,scrf,scrg,scrh,nx,ny,nz,nf)
-      else
-         call vdot2(fdot,scrf,scrg,nx,ny,nf)
-      endif
-      call add2col2(flux(1,5),fdot,jscr,nf)
-
-      return
-      end
 
       subroutine InviscidFlux(wminus,wplus,flux,nstate,nflux)
 !-------------------------------------------------------------------------------
@@ -719,7 +612,161 @@ C> @}
       call face_state_commo(fatface(iwm),fatface(iwp),nfq,nstate
      >                     ,dg_hndl)
       call InviscidBC(fatface(iwm),fatface(iwp),nstate)
-      call InviscidFlux(fatface(iwm),fatface(iwp),fatface(iflx)
+!     call InviscidFlux(fatface(iwm),fatface(iwp),fatface(iflx)
+      call InviscidFluxRot(fatface(iwm),fatface(iwp),fatface(iflx)
      >                 ,nstate,toteq)
       return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine InviscidFluxRot(wminus,wplus,flux,nstate,nflux)
+      include 'SIZE'
+      include 'INPUT' ! do we need this?
+      include 'GEOM' ! for unx
+      include 'CMTDATA' ! do we need this without outflsub?
+      include 'TSTEP' ! for ifield?
+      include 'DG'
+
+! ==============================================================================
+! Arguments
+! ==============================================================================
+      integer nstate,nflux
+      real wminus(lx1*lz1,2*ldim,nelt,nstate),
+     >     wplus(lx1*lz1,2*ldim,nelt,nstate),
+     >     flux(lx1*lz1,2*ldim,nelt,nflux)
+
+! ==============================================================================
+! Locals
+! ==============================================================================
+
+      integer e,f,fdim,i,k,nxz,nface
+      parameter (lfd=lxd*lzd)
+! JH111815 legacy rocflu names.
+!
+! nx,ny,nz : outward facing unit normal components
+! fs       : face speed. zero until we have moving grid
+! jaco_c   : fdim-D GLL grid Jacobian
+! nm       : jaco_c, fine grid
+!
+! State on the interior (-, "left") side of the face
+! rl       : density
+! ul,vl,wl : velocity
+! tl       : temperature
+! al       : sound speed
+! pl       : pressure, then phi
+! el      : rho*cp
+! State on the exterior (+, "right") side of the face
+! rr       : density
+! ur,vr,wr : velocity
+! tr       : temperature
+! ar       : sound speed
+! pr       : pressure
+! er      : rho*cp
+
+      COMMON /SCRNS/ nx(lfd), ny(lfd), nz(lfd), rl(lfd), ul(lfd),
+     >               vl(lfd), wl(lfd), pl(lfd), tl(lfd), al(lfd),
+     >               el(lfd),rr(lfd), ur(lfd), vr(lfd), wr(lfd),
+     >               pr(lfd),tr(lfd), ar(lfd),er(lfd),phl(lfd),fs(lfd),
+     >               jaco_f(lfd),flx(lfd,toteq),jaco_c(lx1*lz1)
+      real nx, ny, nz, rl, ul, vl, wl, pl, tl, al, el, rr, ur, vr, wr,
+     >                pr,tr, ar,er,phl,fs,jaco_f,flx,jaco_c
+
+!     REAL vf(3)
+      real nTol
+      character*132 deathmessage
+      common /nekcb/ cb
+      character*3 cb
+
+      nTol = 1.0E-14
+
+      fdim=ldim-1
+      nface = 2*ldim
+      nxz   = lx1*lz1
+      nxzd  = lxd*lzd
+      ifield= 1 ! You need to figure out the best way of dealing with
+                ! this variable
+
+      do e=1,nelt
+      do f=1,nface
+
+! JH111218 Test 2-point fluxes in rotated form.
+
+         call copy(nx,unx(1,1,f,e),nxz)
+         call copy(ny,uny(1,1,f,e),nxz)
+         call copy(nz,unz(1,1,f,e),nxz)
+
+         call copy(rl,wminus(1,f,e,irho),nxz)
+
+         if(if3d) then
+            call vdot3(ul,wminus(1,f,e,iux),wminus(1,f,e,iuy),
+     >                    wminus(1,f,e,iuz),nx,ny,nz,nxz)
+            call vdot3(vl,wminus(1,f,e,iux),wminus(1,f,e,iuy),
+     >wminus(1,f,e,iuz),t1x(1,1,f,e),t1y(1,1,f,e),t1z(1,1,f,e),nxz)
+            call vdot3(wl,wminus(1,f,e,iux),wminus(1,f,e,iuy),
+     >wminus(1,f,e,iuz),t2x(1,1,f,e),t2y(1,1,f,e),t2z(1,1,f,e),nxz)
+            call vdot3(ur,wplus(1,f,e,iux),wplus(1,f,e,iuy),
+     >                    wplus(1,f,e,iuz),nx,ny,nz,nxz)
+            call vdot3(vr,wplus(1,f,e,iux),wplus(1,f,e,iuy),
+     >wplus(1,f,e,iuz),t1x(1,1,f,e),t1y(1,1,f,e),t1z(1,1,f,e),nxz)
+            call vdot3(wr,wplus(1,f,e,iux),wplus(1,f,e,iuy),
+     >wplus(1,f,e,iuz),t2x(1,1,f,e),t2y(1,1,f,e),t2z(1,1,f,e),nxz)
+         else
+            call vdot2(ul,wminus(1,f,e,iux),wminus(1,f,e,iuy),
+     >                    nx,ny,nxz)
+            call vdot2(vl,wminus(1,f,e,iux),wminus(1,f,e,iuy),
+     >                 t1x(1,1,f,e),t1y(1,1,f,e),nxz)
+            call rzero(wl,nxz)
+            call vdot2(ur,wplus(1,f,e,iux),wplus(1,f,e,iuy),
+     >                    nx,ny,nxz)
+            call vdot2(vr,wplus(1,f,e,iux),wplus(1,f,e,iuy),
+     >                 t1x(1,1,f,e),t1y(1,1,f,e),nxz)
+            call rzero(wr,nxz)
+         endif
+
+         call copy(pl,wminus(1,f,e,ipr),nxz)
+         call copy(tl,wminus(1,f,e,ithm),nxz)
+         call copy(al,wminus(1,f,e,isnd),nxz)
+         call copy(el,wminus(1,f,e,icpf),nxz)
+
+         call copy(rr,wplus(1,f,e,irho),nxz)
+         call copy(pr,wplus(1,f,e,ipr),nxz)
+         call copy(tr,wplus(1,f,e,ithm),nxz)
+         call copy(ar,wplus(1,f,e,isnd),nxz)
+         call copy(er,wplus(1,f,e,icpf),nxz)
+
+         call copy(phl,wminus(1,f,e,iph),nxz)
+
+         call copy(jaco_f,jface(1,1,f,e),nxz) 
+         do i=1,nxz
+            el(i)=el(i)+0.5*(ul(i)**2+vl(i)**2+wl(i)**2)
+            er(i)=er(i)+0.5*(ur(i)**2+vr(i)**2+wr(i)**2)
+         enddo
+
+         call KGrotFluxFunction(nxzd,jaco_f,rl,ul,vl,wl,pl,
+     >                          al,tl,rr,ur,vr,wr,pr,ar,tr,flx,el,er)
+
+         do j=1,toteq
+            call col2(flx(1,j),phl,nxzd)
+         enddo
+! rotate back
+         call copy(flux(1,f,e,1),flx(1,1),nxz)
+         if (if3d) then
+            call vdot3(flux(1,f,e,2),flx(1,2),flx(1,3),flx(1,4),
+     >                                 nx,t1x(1,1,f,e),t2x(1,1,f,e),nxz)
+            call vdot3(flux(1,f,e,3),flx(1,2),flx(1,3),flx(1,4),
+     >                                 ny,t1y(1,1,f,e),t2y(1,1,f,e),nxz)
+            call vdot3(flux(1,f,e,4),flx(1,2),flx(1,3),flx(1,4),
+     >                                 nz,t1z(1,1,f,e),t2z(1,1,f,e),nxz)
+         else
+            call vdot2(flux(1,f,e,2),flx(1,2),flx(1,3),
+     >                                 nx,t1x(1,1,f,e),nxz)
+            call vdot2(flux(1,f,e,3),flx(1,2),flx(1,3),
+     >                                 ny,t1y(1,1,f,e),nxz)
+         endif
+         call copy(flux(1,f,e,5),flx(1,5),nxz)
+
+      enddo
+      enddo
+
       end

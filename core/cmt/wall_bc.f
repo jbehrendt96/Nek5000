@@ -24,7 +24,7 @@ C> @file wall_bc.f Dirichlet states for wall boundary conditions
 ! rind state for inviscid fluxes is different from viscous fluxes? not
 ! sure what the right thing to do is.
 ! JH031617 Collis (CTR 2002-ish), Hartmann & Houston (2006-8) probably BR
-!          and Dolejsi and Feistatuer (2015) (check that)
+!          and Dolejsi and Feistauer (2015) (check that)
 !          all say YES, inviscid rind and viscous rind are different.
       call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)    
       ieg=lglel(e)
