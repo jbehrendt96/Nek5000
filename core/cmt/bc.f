@@ -3,7 +3,7 @@ C> @file bc.f Boundary condition routines
 C> \ingroup bcond
 C> @{
 C> Determining rind state for Dirichlet boundary conditions
-      subroutine InviscidBC(wminus,nstate,flux)
+      subroutine InviscidBC(flux)
 !-------------------------------------------------------------------------------
 ! JH091514 A fading copy of RFLU_ModAUSM.F90 from RocFlu
 !-------------------------------------------------------------------------------
@@ -12,31 +12,36 @@ C> Determining rind state for Dirichlet boundary conditions
 !      USE ModSpecies, ONLY: t_spec_type
 !#endif
       include 'SIZE'
-      include 'INPUT' ! do we need this?
+      include 'INPUT' ! if3d
       include 'CMTDATA' ! do we need this without outflsub?
 !     include 'TSTEP' ! for ifield?
-      include 'DG'
+      include 'GEOM'
 
 ! ==============================================================================
 ! Arguments
 ! ==============================================================================
-      integer nstate,nflux
-      real wminus(lx1*lz1,2*ldim,nelt,nstate),
-     >     flux(lx1*lz1,2*ldim,nelt,toteq)
+      real flux(lx1*lz1,2*ldim,nelt,toteq)
 
 ! ==============================================================================
 ! Locals
 ! ==============================================================================
 
-      integer e,f,fdim,i,k,nxz,nface,ifield
+      integer e,f,fdim,i,k,nxz,nface,ifield,eq
 
       common /nekcb/ cb
       character*3 cb
+      parameter(lxz=lx1*lz1,lstate=5) ! KG is expecting 4.
+                                      ! hopefully, this won't cause problems
+      COMMON /SCRNS/ wminus(lstate,lxz),wplus(lstate,lxz),
+     >               jaminus(3,lxz),japlus(3,lxz),
+     >               uminus(toteq,lxz),uplus(toteq,lxz),
+     >               flx(toteq,lxz)
+      real wminus,wplus,jaminus,japlus,uminus,uplus,flx
+      external kennedygruber,llf_euler
 
       fdim=ldim-1
       nface = 2*ldim
       nxz   = lx1*lz1
-      nxzd  = lxd*lzd
       ifield= 1 ! You need to figure out the best way of dealing with
                 ! this variable
 !     if (outflsub)then
@@ -48,17 +53,52 @@ C> Determining rind state for Dirichlet boundary conditions
 
          cb=cbc(f,e,ifield)
          if (cb.ne.'E  '.and.cb.ne.'P  ') then ! cbc bndy
-! JH060215 added SYM bc. Just use it as a slip wall hopefully.
-! JH021717 OK I just realized that this way doubles my userbc calls.
-!          not sure if face loop and if-block for cb is a better way
-!          to do it or not.
+! BC routines to fill face points
+! facind + userbc for wminus, uminus
+! dirichlet routines for wplus, uplus
             if (cb.eq.'v  ' .or. cb .eq. 'V  ') then
-              call inflow(nstate,f,e,wminus,flux)
+              call inflow(f,e,wminus,wplus,uminus,uplus)
             elseif (cb.eq.'O  ') then
-              call outflow(nstate,f,e,wminus,flux)
+              call outflow(f,e,wminus,wplus,uminus,uplus)
             elseif (cb .eq. 'W  ' .or. cb .eq.'I  '.or.cb .eq.'SYM')then
-              call wallbc_inviscid(nstate,f,e,wminus,flux)
+              call wallbc_inviscid(f,e,wminus,wplus,uminus,uplus)
             endif 
+
+! convert surface normals into metric terms for two-point fluxes (just
+! face Jacobian times normal vector)
+
+            do i=1,nxz
+               jaminus(1,i)=unx(i,1,f,e)
+               jaminus(2,i)=uny(i,1,f,e)
+            enddo
+            if(if3d) then
+               do i=1,nxz
+                  jaminus(3,i)=unz(i,1,f,e)
+               enddo
+            else
+               do i=1,nxz
+                  jaminus(3,i)=0.0
+               enddo
+            endif
+! boundaries are watertight lol
+            call copy(japlus,jaminus,3*nxz)
+
+! two-point flux
+            call sequential_flux(flx,wminus,wplus,uminus,uplus,jaminus,
+     >                           japlus,kennedygruber,lstate,nxz)
+            do eq=1,toteq
+            do i=1,nxz
+            flux(i,1,f,e,eq)=flux(i,1,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
+            enddo
+            enddo
+! stabilization flux
+            call sequential_flux(flx,wminus,wplus,uminus,uplus,jaminus,
+     >                           japlus,llf_euler,lstate,nxz)
+            do eq=1,toteq
+            do i=1,nxz
+            flux(i,1,f,e,eq)=flux(i,1,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
+            enddo
+            enddo
 
          endif
       enddo

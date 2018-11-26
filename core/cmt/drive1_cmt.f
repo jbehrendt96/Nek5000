@@ -115,7 +115,7 @@ C> Store it in res1
       real graduf
       external trivial
       external rhoe_to_e ! parameter vector function
-      external llf_euler ! stabilization flux fstab
+      external llf_euler_vec ! stabilization flux fstab
       external kennedygruber_vec ! surface flux fsharp
 
       integer e,eq
@@ -166,7 +166,7 @@ C> Restrict via \f$\mathbf{E}\f$ to get primitive and conserved variables
 C> on interior faces \f$\mathbf{U}^-\f$ and neighbor faces
 C> \f$\mathbf{U}^+\f$; store in CMTSURFLX
 !     call fluxes_full_field_old
-      call fluxes_full_field(llf_euler,rhoe_to_e,kennedygruber_vec)
+      call fluxes_full_field(llf_euler_vec,rhoe_to_e,kennedygruber_vec)
 
 C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       nstate=nqq

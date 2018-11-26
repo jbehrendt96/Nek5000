@@ -213,10 +213,42 @@ C> @}
       end
 
 !-----------------------------------------------------------------------
-
-      subroutine llf_euler(wminus,uplus,flux,nstate) ! fstab
+      subroutine llf_euler(flx,ul,ur,wl,wr,nrm,dum)
 ! local Lax-Friedrichs done for the Euler equations (i.e., wave speed is
-! hardcoded for the gas dynamics)
+! hardcoded for gas dynamics) on an arbitrary pair of points sharing
+! a normal vector nrm. the dummy argument dum is to match the signature
+! of other two-point fluxes
+      include 'SIZE' ! for ldim
+      parameter (isnd=5) ! not sure yet
+      real flx(5)
+      real ul(5),ur(5),wl(5),wr(5),nrm(3),dum(3)
+      real lambda
+      rl=ul(1)
+      rr=ur(1)
+      al=wl(isnd)
+      ar=wr(isnd)
+      unrml=0.0
+      unrmr=0.0
+      do i=1,ldim
+         unrml=unrml+nrm(i)*wl(i)
+         unrmr=unrmr+nrm(i)*wr(i)
+      enddo
+      unrml=abs(unrml)+al
+      unrmr=abs(unrmr)+ar
+      lambda=0.5*max(unrml,unrmr)
+      do i=1,toteq ! bake the minus sign into the formula here
+!        flx(i)=-lambda*(ur(i)-ul(i))
+         flx(i)=lambda*(ul(i)-ur(i))
+      enddo
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine llf_euler_vec(wminus,uplus,flux,nstate) ! fstab
+! local Lax-Friedrichs done for the Euler equations (i.e., wave speed is
+! hardcoded for gas dynamics) on interior faces only (so gs_op is used
+! to get neighbor values)
       include 'SIZE'
       include 'INPUT'
       include 'GEOM'
@@ -347,7 +379,7 @@ C> @}
 ! I don't know what to do with volume fraction phi, and this is my first guess
       call col3(jscr,jface,z(1,iph),nf) ! Jscr=JA*{{\phi_g}}
 
-! boundary faces already have fluxes, so zero out jscr there
+! zero out jscr at boundary faces; gs_op is degenerate there.
       call bcmask_cmt(jscr)
 
       do e=1,nelt

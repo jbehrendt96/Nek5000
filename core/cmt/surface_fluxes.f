@@ -62,8 +62,6 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
       call fillq(irho,vtrans,fatface(iwm),fatface(iwp))
       call fillq(ipr, pr,    fatface(iwm),fatface(iwp))
-! Now do all fluxes for all boundaries, both F# and stabilized
-      call InviscidBC(fatface(iwm),nstate,fatface(iflx))
 
 ! q- -> z-. Kennedy-Gruber, Pirozzoli, and most energy-
 !           conserving fluxes have z=q, so I just divide total energy by
@@ -85,6 +83,8 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 !     enddo
 
 C> @}
+! Now do all fluxes for all boundaries, both F# and stabilized
+      call InviscidBC(fatface(iflx))
 
       return
       end
@@ -192,6 +192,30 @@ C> @}
       return
       end
 
+!-------------------------------------------------------------------------------
+
+      subroutine sequential_flux(flux,wminus,wplus,uminus,uplus,
+     >                           jaminus,japlus,
+     >                           fluxfunction,nstate,npt)
+! Calls two-point flux functions one point at a time for npt points for which both
+! points are given. Mostly intended to allow quantity-innermost volume flux
+! functions to be used where needed for boundary points too, after *bc routines
+! provide Dirichlet ``rind'' states in wplus and uplus.
+      include 'SIZE'
+      real flux(toteq,npt),wminus(nstate,npt),wplus(nstate,npt),
+     >   jaminus(3,npt),japlus(3,npt),uminus(toteq,npt),uplus(toteq,npt)
+      external fluxfunction
+
+      do i=1,npt
+         call fluxfunction(flux(1,i),uminus(1,i),uplus(1,i),wminus(1,i),
+     >                     wplus(1,i),jaminus(1,i),japlus(1,i))
+      enddo
+
+      return
+      end
+
+!-------------------------------------------------------------------------------
+! OBSOLETE ROUTINES
 !-------------------------------------------------------------------------------
 
       subroutine InviscidFlux(wminus,wplus,flux,nstate,nflux)

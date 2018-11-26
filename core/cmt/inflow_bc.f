@@ -1,22 +1,22 @@
 C> @file Dirichlet states for inflow boundary conditions
-      subroutine inflow(nvar,f,e,facew,flux)
+      subroutine inflow(nvar,f,e,wminus,flux)
       INCLUDE 'SIZE'
       INCLUDE 'INPUT'
       INCLUDE 'CMTBCDATA'
       integer nvar,f,e
-      real facew(lx1,lz1,2*ldim,nelt,nvar)
+      real wminus(lx1,lz1,2*ldim,nelt,nvar)
       real flux(lx1,lz1,2*ldim,nelt,nvar)
 
 ! JH021717 compare
-!     call inflow_rflu(nvar,f,e,facew,wbc)
-      call inflow_inviscid(nvar,f,e,facew,flux)
+!     call inflow_rflu(nvar,f,e,facew,flux)
+      call inflow_df(nvar,f,e,wminus,flux)
 
       return
       end
 
 !--------------------------------------------------------------------
 
-      subroutine inflow_rflu(nvar,f,e,facew)!,flux)
+      subroutine inflow_rflu(nvar,f,e,wminus,flux)
       include 'SIZE'
       include 'INPUT'
       include 'NEKUSE'
@@ -28,8 +28,8 @@ C> @file Dirichlet states for inflow boundary conditions
 
       integer f,e,fdim ! intent(in)
       integer i,bcOptType
-      real facew(lx1*lz1,2*ldim,nelt,nvar) ! intent(in)
-      real wbc  (lx1*lz1,2*ldim,nelt,nvar)   ! intent(out)
+      real wminus(lx1*lz1,2*ldim,nelt,nvar) ! intent(in)
+      real flux  (lx1*lz1,2*ldim,nelt,toteq)   ! intent(out)
       real snx,sny,snz,rhou,rhov,rhow,pl,rhob,rhoub,rhovb,rhowb
      >     ,rhoeb, mach
 
@@ -53,11 +53,16 @@ c                                     !     ux,uy,uz
          snx  = unx(l,1,f,e)
          sny  = uny(l,1,f,e)
 
-         rho  = facew(l,f,e,iu1)/facew(l,f,e,iph)
-         rhou = facew(l,f,e,iu2)/facew(l,f,e,iph)
-         rhov = facew(l,f,e,iu3)/facew(l,f,e,iph)
-         rhow = facew(l,f,e,iu4)/facew(l,f,e,iph)
-         rhoe = facew(l,f,e,iu5)/facew(l,f,e,iph)
+!        rho  = facew(l,f,e,iu1)/facew(l,f,e,iph)
+!        rhou = facew(l,f,e,iu2)/facew(l,f,e,iph)
+!        rhov = facew(l,f,e,iu3)/facew(l,f,e,iph)
+!        rhow = facew(l,f,e,iu4)/facew(l,f,e,iph)
+!        rhoe = facew(l,f,e,iu5)/facew(l,f,e,iph)
+         rho  = u(ix,iy,iz,1,e)/phig(ix,iy,iz,e)
+         rhou = u(ix,iy,iz,2,e)/phig(ix,iy,iz,e)
+         rhov = u(ix,iy,iz,3,e)/phig(ix,iy,iz,e)
+         rhow = u(ix,iy,iz,4,e)/phig(ix,iy,iz,e)
+         rhoe = u(ix,iy,iz,5,e)/phig(ix,iy,iz,e)
 
          if (if3d) then
             mach = sqrt(ux**2+uy**2+uz**2)/asnd
@@ -73,20 +78,20 @@ c                                     !     ux,uy,uz
      >                       ,molarmass,rho,rhou,rhov,rhow,rhob,rhoub
      >                       ,rhovb,rhowb,rhoeb,pres,asnd,temp)
          
-         wbc(l,f,e,irho) = rhob
-         wbc(l,f,e,iux)  = ux
-         wbc(l,f,e,iuy)  = uy
-         wbc(l,f,e,iuz)  = uz
-         wbc(l,f,e,isnd) = asnd ! overwritten by Bcond
-         wbc(l,f,e,ipr)  = pres ! overwritten by Bcond
-         wbc(l,f,e,ithm) = temp ! overwritten by Bcond
-         wbc(l,f,e,icpf) = rho*cp
-         wbc(l,f,e,icvf) = rho*cv
-         wbc(l,f,e,iu1)  = rhob*phi
-         wbc(l,f,e,iu2)  = rhoub*phi
-         wbc(l,f,e,iu3)  = rhovb*phi
-         wbc(l,f,e,iu4)  = rhowb*phi
-         wbc(l,f,e,iu5)  = rhoeb*phi
+         wbc(l,irho) = rhob
+         wbc(l,iux)  = ux
+         wbc(l,iuy)  = uy
+         wbc(l,iuz)  = uz
+         wbc(l,isnd) = asnd ! overwritten by Bcond
+         wbc(l,ipr)  = pres ! overwritten by Bcond
+         wbc(l,ithm) = temp ! overwritten by Bcond
+         wbc(l,icpf) = rho*cp
+         wbc(l,icvf) = rho*cv
+         wbc(l,iu1)  = rhob*phi
+         wbc(l,iu2)  = rhoub*phi
+         wbc(l,iu3)  = rhovb*phi
+         wbc(l,iu4)  = rhowb*phi
+         wbc(l,iu5)  = rhoeb*phi
       enddo
       enddo
       enddo
@@ -96,7 +101,7 @@ c                                     !     ux,uy,uz
 
 !--------------------------------------------------------------------
 
-      subroutine inflow_inviscid(nvar,f,e,facew,wbc)
+      subroutine inflow_df(nvar,f,e,facew,wbc)
 ! JH021717 more conventional Dolejsi & Feistauer (2015),
 !          Hartmann & Houston (2006) type boundary conditions
 !          Emergency fallback if Holmes just doesn't play nice with DG
