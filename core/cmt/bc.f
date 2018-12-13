@@ -57,11 +57,11 @@ C> Determining rind state for Dirichlet boundary conditions
 ! facind + userbc for wminus, uminus
 ! dirichlet routines for wplus, uplus
             if (cb.eq.'v  ' .or. cb .eq. 'V  ') then
-              call inflow(f,e,wminus,wplus,uminus,uplus)
+              call inflow(f,e,wminus,wplus,uminus,uplus,lstate)
             elseif (cb.eq.'O  ') then
-              call outflow(f,e,wminus,wplus,uminus,uplus)
+              call outflow(f,e,wminus,wplus,uminus,uplus,lstate)
             elseif (cb .eq. 'W  ' .or. cb .eq.'I  '.or.cb .eq.'SYM')then
-              call wallbc_inviscid(f,e,wminus,wplus,uminus,uplus)
+              call wallbc_inviscid(f,e,wminus,wplus,uminus,uplus,lstate)
             endif 
 
 ! convert surface normals into metric terms for two-point fluxes (just

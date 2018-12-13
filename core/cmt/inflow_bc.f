@@ -1,15 +1,14 @@
 C> @file Dirichlet states for inflow boundary conditions
-      subroutine inflow(nvar,f,e,wminus,flux)
+      subroutine inflow(f,e,wminus,wplus,uminus,uplus,nvar)
       INCLUDE 'SIZE'
       INCLUDE 'INPUT'
       INCLUDE 'CMTBCDATA'
       integer nvar,f,e
-      real wminus(lx1,lz1,2*ldim,nelt,nvar)
-      real flux(lx1,lz1,2*ldim,nelt,nvar)
+      real wminus(nvar,lx1*lz1),wplus(nvar,lx1*lz1),uplus(toteq,lx1*lz1)
+     >     uminus(toteq,lx1*lz1),uplus(toteq,lx1*lz1)
 
-! JH021717 compare
-!     call inflow_rflu(nvar,f,e,facew,flux)
-      call inflow_df(nvar,f,e,wminus,flux)
+! JH112718 wrapper for other BC routines. Just one for now. More to come.
+      call inflow_df(f,e,wminus,wplus,uminus,uplus,nvar)
 
       return
       end
@@ -17,6 +16,9 @@ C> @file Dirichlet states for inflow boundary conditions
 !--------------------------------------------------------------------
 
       subroutine inflow_rflu(nvar,f,e,wminus,flux)
+! JH112718 Poorly thought-out routine to get rind state from RocFlu's
+!          implementation of Holmes' inflow conditions. Backburnered
+!          for awhile
       include 'SIZE'
       include 'INPUT'
       include 'NEKUSE'
@@ -101,12 +103,13 @@ c                                     !     ux,uy,uz
 
 !--------------------------------------------------------------------
 
-      subroutine inflow_df(nvar,f,e,facew,wbc)
-! JH021717 more conventional Dolejsi & Feistauer (2015),
-!          Hartmann & Houston (2006) type boundary conditions
-!          Emergency fallback if Holmes just doesn't play nice with DG
+C> \ingroup isurf
+C> @{
+      subroutine inflow_df(f,e,wm,wp,um,up,nvar)
+C> more conventional Dolejsi & Feistauer (2015) Section 8.3.2.2
+C> ``physical'' boundary conditions. Also encountered in
+C> Hartmann & Houston (2006). A poor default.
       include 'SIZE'
-!     include 'TSTEP' ! diagnostics
       include 'INPUT'
       include 'NEKUSE'
       include 'CMTDATA'
@@ -115,16 +118,12 @@ c                                     !     ux,uy,uz
       include 'DG'
       include 'PERFECTGAS'
 
-      integer f,e,fdim ! intent(in)
-      integer i
-      real facew(lx1*lz1,2*ldim,nelt,nvar) ! intent(in)
-      real wbc  (lx1*lz1,2*ldim,nelt,nvar)   ! intent(out)
-      real snx,sny,snz,rhou,rhov,rhow,pl,rhob,rhoub,rhovb,rhowb
-     >     ,rhoeb, mach
+      integer f,e,nvar ! intent(in)
+      real wm(nvar,lx1*lz1),wp(nvar,lx1*lz1),up(toteq,lx1*lz1)
+     >     uminus(toteq,lx1,lz1),uplus(toteq,lx1,lz1)
+      real mach
 
       nxz=lx1*lz1
-      nxzd=lxd*lzd
-      fdim=ldim-1
       ieg=lglel(e)
 
       call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)    
@@ -134,33 +133,42 @@ c                                     !     ux,uy,uz
       do ix=i0,i1
          call nekasgn(ix,iy,iz,e)
          call cmtasgn(ix,iy,iz,e)
-         call userbc (ix,iy,iz,f,ieg) ! get molarmass asnd phi t0in p0in cp cv
-c                                     !     ux,uy,uz
+         call userbc (ix,iy,iz,f,ieg) ! get rho, molarmass, ux, uy and uz
          l=l+1
-         wbc(l,f,e,irho) = rho  ! Dirichlet, userbc
-         wbc(l,f,e,iux)  = ux   ! Dirichlet, userbc
-         wbc(l,f,e,iuy)  = uy   ! Dirichlet, userbc
-         wbc(l,f,e,iuz)  = uz   ! Dirichlet, userbc
-         wbc(l,f,e,iph)  = phi  ! Dirichlet, userbc
-         rhob   = rho*phi
-         rhoub  = rho*ux*phi
-         rhovb  = rho*uy*phi
-         rhowb  = rho*uz*phi
-         wbc(l,f,e,iu1)  = rhob
-         wbc(l,f,e,iu2)  = rhoub
-         wbc(l,f,e,iu3)  = rhovb
-         wbc(l,f,e,iu4)  = rhowb
+         um(1,l)=u(ix,iy,iz,1,e)
+         um(2,l)=u(ix,iy,iz,2,e)
+         um(3,l)=u(ix,iy,iz,3,e)
+         um(4,l)=u(ix,iy,iz,4,e)
+         um(5,l)=u(ix,iy,iz,5,e)
+         wm(iux,l)=vx(ix,iy,iz,e)
+         wm(iuy,l)=vy(ix,iy,iz,e)
+         wm(iuz,l)=vz(ix,iy,iz,e)
+         wm(ipr,l)=pr(ix,iy,iz,e)
+         wm(ithm,l)=t(ix,iy,iz,e,1)
+         wm(iraux,l)=vtrans(ix,iy,iz,e,irho)
+         wm(isnd,l)=csound(ix,iy,iz,e)
+         wm(iph,l)=phig(ix,iy,iz,e)
 
-         if (if3d) then ! shouldn't this be normal Mach number?
-            mach = sqrt(ux**2+uy**2+uz**2)/asnd
-            snz  = unz(l,1,f,e)
-         else
-            mach = sqrt(ux**2+uy**2)/asnd
-            snz=0.0
-         endif
+         wp(iux,l)= ux   ! Dirichlet, userbc
+         wp(iuy,l)= uy   ! Dirichlet, userbc
+         wp(iuz,l)= uz   ! Dirichlet, userbc
+         wp(iph,l)  = phi  ! Dirichlet, userbc.
+         wp(iraux,l)=rho  ! Dirichlet, userbc
+         up(1,l)= rho*phi
+         up(2,l)= rho*ux*phi
+         up(3,l)= rho*uy*phi
+         up(4,l)= rho*uz*phi
 
          snx  = unx(l,1,f,e)
          sny  = uny(l,1,f,e)
+
+         if (if3d) then
+            snz  = unz(l,1,f,e)
+            mach = abs(ux*snx+uy*sny+uz*snz)/asnd
+         else
+            snz=0.0
+            mach = abs(ux*snx+uy*sny)/asnd
+         endif
 
          if (mach.lt.1.0) then
 

@@ -198,7 +198,7 @@ C> Convective volume terms formed and differentiated^T here
       end
 C> @}
 
-      subroutine fluxdiv_2point_slow(res,e,ja,vfluxfunction)
+      subroutine fluxdiv_2point_slow(res,e,ja,fluxfunction)
       include 'SIZE'
       include 'DG'
       include 'GEOM' ! diagnostic. conflicts with ja
@@ -206,7 +206,7 @@ C> @}
       include 'CMTDATA'
 ! JH062018 two-point energy-preserving/SBP flux divergence volume integral, slow and naive
       integer e,eq
-      external vfluxfunction
+      external fluxfunction
       real res(lx1,ly1,lz1,lelt,toteq) ! CMTDATA lurks
       real ja(lx1,ly1,lz1,ldim,ldim)   ! rst outermost
 ! scratch element for extra variables (hardcoded) and conserved variables U
@@ -242,7 +242,7 @@ C> @}
       do ix=1,lx1
 ! r-direction
          do l=1,lx1
-            call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
+            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
      >                         waux(1,ix,iy,iz),waux(1,l,iy,iz),
      >                         jat(1,1,ix,iy,iz),jat(1,1,l,iy,iz))
             do eq=1,toteq
@@ -252,7 +252,7 @@ C> @}
          enddo
 ! s-direction
          do l=1,ly1
-            call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
+            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
      >                         waux(1,ix,iy,iz),waux(1,ix,l,iz),
      >                         jat(1,2,ix,iy,iz),jat(1,2,ix,l,iz))
             do eq=1,toteq
@@ -270,7 +270,7 @@ C> @}
       do ix=1,lx1
 ! t-direction
          do l=1,lz1
-            call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
+            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
      >                         waux(1,ix,iy,iz),waux(1,ix,iy,l),
      >                         jat(1,3,ix,iy,iz),jat(1,3,ix,iy,l))
             do eq=1,toteq
@@ -288,7 +288,7 @@ C> @}
 
 !-----------------------------------------------------------------------
 
-      subroutine fluxdiv_2point_scr(res,fcons,e,ja,vfluxfunction)
+      subroutine fluxdiv_2point_scr(res,fcons,e,ja,fluxfunction)
       include 'SIZE'
       include 'DG'
       include 'SOLN'
@@ -297,9 +297,9 @@ C> @}
 !          in the contravariant frame, call fluxdiv_2point, and increment res
 !          for e^th element.
 !          Metric terms Ja probably shouldn't be an argument but whatever.
-!          vfluxfunction is an argument in the spirit of Gassner, Winters & Kopriva
+!          fluxfunction is an argument in the spirit of Gassner, Winters & Kopriva
       integer e,eq
-      external vfluxfunction
+      external fluxfunction
       real res(lx1,ly1,lz1,lelt,toteq) ! CMTDATA lurks
       real ja(lx1,ly1,lz1,ldim,ldim)   ! rst outermost
       real fcons(lx1,ly1,lz1,3,toteq)   ! consistent ``1-point'' flux
@@ -338,7 +338,7 @@ C> @}
          call rzero(rhsscr,toteq*lx1)
          do ix=1,lx1
             do l=ix+1,lx1
-               call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
+               call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
      >                            waux(1,ix,iy,iz),waux(1,l,iy,iz),
      >                            jat(1,1,ix,iy,iz),jat(1,1,l,iy,iz))
                do eq=1,toteq
@@ -360,7 +360,7 @@ C> @}
 
 ! consider repacking ut and waux with iy in second place
 ! diagnostic kg is consistent in r and s
-!            call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,iz),
+!            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,iz),
 !     >                            waux(1,ix,iy,iz),waux(1,ix,iy,iz),
 !     >                            jat(1,2,ix,iy,iz),jat(1,2,ix,iy,iz))
 !               write(60+eq,'(5e15.7)')
@@ -373,7 +373,7 @@ C> @}
          call rzero(rhsscr,toteq*ly1)
          do iy=1,ly1
             do l=iy+1,ly1
-               call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
+               call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
      >                            waux(1,ix,iy,iz),waux(1,ix,l,iz),
      >                            jat(1,2,ix,iy,iz),jat(1,2,ix,l,iz))
                do eq=1,toteq
@@ -404,7 +404,7 @@ C> @}
          call rzero(rhsscr,toteq*lz1)
          do iz=1,lz1
             do l=iz+1,lz1
-               call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
+               call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
      >                            waux(1,ix,iy,iz),waux(1,ix,iy,l),
      >                            jat(1,3,ix,iy,iz),jat(1,3,ix,iy,l))
                do eq=1,toteq
@@ -432,7 +432,7 @@ C> @}
 
 !-----------------------------------------------------------------------
 
-      subroutine fluxdiv_2point_noscr(res,fcons,e,ja,vfluxfunction)
+      subroutine fluxdiv_2point_noscr(res,fcons,e,ja,fluxfunction)
       include 'SIZE'
       include 'DG'
       include 'SOLN'
@@ -443,11 +443,11 @@ C> @}
 !          in the contravariant frame, call fluxdiv_2point, and increment res
 !          for e^th element.
 !          Metric terms Ja probably shouldn't be an argument but whatever.
-!          vfluxfunction is an argument in the spirit of Gassner, Winters & Kopriva
+!          fluxfunction is an argument in the spirit of Gassner, Winters & Kopriva
 !          and FLUXO (github.com/project-fluxo/fluxo)
 !          res is LOCAL RHS (not indexed by e)
       integer e,eq
-      external vfluxfunction
+      external fluxfunction
       real res(lx1,ly1,lz1,lelt,toteq) ! CMTDATA lurks
       real ja(lx1,ly1,lz1,ldim,ldim)   ! rst outermost
       real fcons(lx1,ly1,lz1,3,toteq)   ! consistent ``1-point'' flux
@@ -485,7 +485,7 @@ C> @}
       do ix=1,lx1
 ! r-direction
          do l=ix+1,lx1
-            call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
+            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
      >                            waux(1,ix,iy,iz),waux(1,l,iy,iz),
      >                            jat(1,1,ix,iy,iz),jat(1,1,l,iy,iz))
             do eq=1,toteq
@@ -501,7 +501,7 @@ C> @}
 
 ! s-direction
          do l=iy+1,ly1
-            call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
+            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
      >                            waux(1,ix,iy,iz),waux(1,ix,l,iz),
      >                            jat(1,2,ix,iy,iz),jat(1,2,ix,l,iz))
             do eq=1,toteq
@@ -516,7 +516,7 @@ C> @}
 
 ! t-direction
          do l=iz+1,lz1
-            call vfluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
+            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
      >                            waux(1,ix,iy,iz),waux(1,ix,iy,l),
      >                            jat(1,3,ix,iy,iz),jat(1,3,ix,iy,l))
             do eq=1,toteq
