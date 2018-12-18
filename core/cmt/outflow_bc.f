@@ -1,13 +1,98 @@
 C> @file outflow_bc.f Dirichlet states for outflow boundary conditions
-      subroutine outflow(nvar,f,e,facew,wbc) ! don't really need nvar anymore
+C> wrapper for other BC routines. Just one for now. More to come.
+      subroutine outflow(f,e,wminus,wplus,uminus,uplus,nvar)
       INCLUDE 'SIZE'
       INCLUDE 'INPUT'
+      INCLUDE 'CMTBCDATA'
+      integer nvar,f,e
+      real wminus(nvar,lx1*lz1),wplus(nvar,lx1*lz1),
+     >     uminus(toteq,lx1*lz1),uplus(toteq,lx1*lz1)
 
-      integer  nvar,f,e
-      real facew(lx1,lz1,2*ldim,nelt,nvar)
-      real wbc(lx1,lz1,2*ldim,nelt,nvar)
+      call outflow_df(f,e,wminus,wplus,uminus,uplus,nvar)
 
-      call outflow_rflu(nvar,f,e,facew,wbc)
+      return
+      end
+
+!--------------------------------------------------------------------
+
+C> \ingroup isurf
+C> @{
+      subroutine outflow_df(f,e,wm,wp,um,up,nvar)
+C> more conventional Dolejsi & Feistauer (2015) Section 8.3.2.2
+C> ``physical'' boundary conditions. Also encountered in
+C> Hartmann & Houston (2006). A poor default.
+      include 'SIZE'
+      include 'TOTAL'
+      include 'NEKUSE'
+      include 'CMTDATA'
+
+      integer f,e,nvar ! intent(in)
+      real wm(nvar,lx1*lz1),wp(nvar,lx1*lz1),
+     >     um(toteq,lx1*lz1),up(toteq,lx1*lz1)
+      real mach
+      integer eq
+
+      nxz=lx1*lz1
+      ieg=lglel(e)
+
+      call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)    
+      l=0
+      do iz=k0,k1
+      do iy=j0,j1
+      do ix=i0,i1
+         call nekasgn(ix,iy,iz,e)
+         call cmtasgn(ix,iy,iz,e)
+         call userbc (ix,iy,iz,f,ieg) ! get pinfty and e_internal=\rho e
+         l=l+1
+         do eq=1,toteq
+            um(eq,l)=u(ix,iy,iz,eq,e)
+         enddo
+         wm(iux,l)=vx(ix,iy,iz,e)
+         wm(iuy,l)=vy(ix,iy,iz,e)
+         wm(iuz,l)=vz(ix,iy,iz,e)
+         wm(ipr,l)=pr(ix,iy,iz,e)
+         wm(ithm,l)=t(ix,iy,iz,e,1)
+         wm(iraux,l)=vtrans(ix,iy,iz,e,irho)
+         wm(isnd,l)=csound(ix,iy,iz,e)
+         wm(iph,l)=phig(ix,iy,iz,e)
+
+         wp(iux,l)= wm(iux,l)
+         wp(iuy,l)= wm(iuy,l)
+         wp(iuz,l)= wm(iuz,l)
+         wp(iph,l)  = wm(iph,l)
+         wp(iraux,l)= wm(iraux,l)
+         call copy(up(1,l),um(1,l),4)
+
+         snx  = unx(l,1,f,e)
+         sny  = uny(l,1,f,e)
+         snz  = unz(l,1,f,e)
+         mach = abs(wm(iux,l)*snx+wm(iuy,l)*sny+wm(iuz,l)*snz)/
+     >          wm(isnd,l)
+
+         if (mach.lt.1.0) then ! userbc should have set this to pinfty
+
+            wp(ipr,l)  = pres ! userbc should have set this to pinfty
+            wp(isnd,l) = asnd ! userbc should have set this to a(pinfty,rho-)
+            wp(ithm,l) = temp   ! userbc should have set this to T(pinfty,rho-)
+!           up(5,l)=wm(irho,l)*e_internal ! userbc plz set e_internal(temp)
+            up(5,l)=e_internal ! here AND ONLY HERE is e_internal density-weighted
+     >          +0.5*wm(irho,l)*(wm(iux,l)**2+wm(iuy,l)**2+wm(iux,l)**2)
+            up(5,l)=up(5,l)*wm(iph,l)
+
+         else ! supersonic outflow
+
+            wp(ipr,l)  = wm(ipr,l)
+            wp(isnd,l) = wm(isnd,l)
+            wp(ithm,l) = wm(ithm,l)
+            up(5,l)=um(5,l)
+
+         endif
+
+         call copy(up(1,l),um(1,l),4)
+
+      enddo
+      enddo
+      enddo
 
       return
       end

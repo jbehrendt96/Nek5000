@@ -1,13 +1,13 @@
 C> @file Dirichlet states for inflow boundary conditions
+C> wrapper for other BC routines. Just one for now. More to come.
       subroutine inflow(f,e,wminus,wplus,uminus,uplus,nvar)
       INCLUDE 'SIZE'
       INCLUDE 'INPUT'
       INCLUDE 'CMTBCDATA'
       integer nvar,f,e
-      real wminus(nvar,lx1*lz1),wplus(nvar,lx1*lz1),uplus(toteq,lx1*lz1)
+      real wminus(nvar,lx1*lz1),wplus(nvar,lx1*lz1),
      >     uminus(toteq,lx1*lz1),uplus(toteq,lx1*lz1)
 
-! JH112718 wrapper for other BC routines. Just one for now. More to come.
       call inflow_df(f,e,wminus,wplus,uminus,uplus,nvar)
 
       return
@@ -15,7 +15,7 @@ C> @file Dirichlet states for inflow boundary conditions
 
 !--------------------------------------------------------------------
 
-      subroutine inflow_rflu(nvar,f,e,wminus,flux)
+      subroutine inflow_rflu(nvar,f,e,wminus,wbc)
 ! JH112718 Poorly thought-out routine to get rind state from RocFlu's
 !          implementation of Holmes' inflow conditions. Backburnered
 !          for awhile
@@ -31,7 +31,7 @@ C> @file Dirichlet states for inflow boundary conditions
       integer f,e,fdim ! intent(in)
       integer i,bcOptType
       real wminus(lx1*lz1,2*ldim,nelt,nvar) ! intent(in)
-      real flux  (lx1*lz1,2*ldim,nelt,toteq)   ! intent(out)
+      real wbc(lx1*lz1,nvar) ! intent(in)
       real snx,sny,snz,rhou,rhov,rhow,pl,rhob,rhoub,rhovb,rhowb
      >     ,rhoeb, mach
 
@@ -110,18 +110,15 @@ C> more conventional Dolejsi & Feistauer (2015) Section 8.3.2.2
 C> ``physical'' boundary conditions. Also encountered in
 C> Hartmann & Houston (2006). A poor default.
       include 'SIZE'
-      include 'INPUT'
+      include 'TOTAL'
       include 'NEKUSE'
       include 'CMTDATA'
-      include 'GEOM'
-      include 'PARALLEL'
-      include 'DG'
-      include 'PERFECTGAS'
 
       integer f,e,nvar ! intent(in)
-      real wm(nvar,lx1*lz1),wp(nvar,lx1*lz1),up(toteq,lx1*lz1)
-     >     uminus(toteq,lx1,lz1),uplus(toteq,lx1,lz1)
+      real wm(nvar,lx1*lz1),wp(nvar,lx1*lz1),
+     >     um(toteq,lx1*lz1),up(toteq,lx1*lz1)
       real mach
+      integer eq
 
       nxz=lx1*lz1
       ieg=lglel(e)
@@ -135,11 +132,9 @@ C> Hartmann & Houston (2006). A poor default.
          call cmtasgn(ix,iy,iz,e)
          call userbc (ix,iy,iz,f,ieg) ! get rho, molarmass, ux, uy and uz
          l=l+1
-         um(1,l)=u(ix,iy,iz,1,e)
-         um(2,l)=u(ix,iy,iz,2,e)
-         um(3,l)=u(ix,iy,iz,3,e)
-         um(4,l)=u(ix,iy,iz,4,e)
-         um(5,l)=u(ix,iy,iz,5,e)
+         do eq=1,toteq
+            um(eq,l)=u(ix,iy,iz,eq,e)
+         enddo
          wm(iux,l)=vx(ix,iy,iz,e)
          wm(iuy,l)=vy(ix,iy,iz,e)
          wm(iuz,l)=vz(ix,iy,iz,e)
@@ -161,38 +156,27 @@ C> Hartmann & Houston (2006). A poor default.
 
          snx  = unx(l,1,f,e)
          sny  = uny(l,1,f,e)
-
-         if (if3d) then
-            snz  = unz(l,1,f,e)
-            mach = abs(ux*snx+uy*sny+uz*snz)/asnd
-         else
-            snz=0.0
-            mach = abs(ux*snx+uy*sny)/asnd
-         endif
+         snz  = unz(l,1,f,e)
+         mach = abs(ux*snx+uy*sny+uz*snz)/asnd ! better be uz=0.0 in 2D
 
          if (mach.lt.1.0) then
 
-            pres  = facew(l,f,e,ipr) ! extrapolated, overwritten
-            temp = pres/rho/(cp-cv) ! definitely too perfect!
-            wbc(l,f,e,ipr)  = pres
-            wbc(l,f,e,isnd) = sqrt(cp/cv*pres/rho) ! too perfect?
-            wbc(l,f,e,ithm) = temp      ! definitely too perfect!
-            wbc(l,f,e,icpf) = rho*cp ! NEED EOS WITH TEMP Dirichlet, userbc
-            wbc(l,f,e,icvf) = rho*cv ! NEED EOS WITH TEMP Dirichlet, userbc
+            wp(ipr,l)  = wm(ipr,l)
+            wp(isnd,l) = asnd ! userbc should have set this to a(p-,rho+)
+            wp(ithm,l) = temp ! userbc should have set this to T(p-,rho+)
 
          else ! supersonic inflow
 
-            wbc(l,f,e,ipr)  = pres
-            wbc(l,f,e,isnd) = asnd
-            wbc(l,f,e,ithm) = temp
-            wbc(l,f,e,icpf) = rho*cp
-            wbc(l,f,e,icvf) = rho*cv
+            wp(ipr,l)  = pres ! Inflow state, userbc
+            wp(isnd,l) = asnd ! Inflow state, userbc
+            wp(ithm,l) = temp ! Inflow state, userbc
 
          endif
 
-! find a smarter way of doing this. fold it into usr file if you must
-         wbc(l,f,e,iu5)  = phi*rho*cv*temp+0.5/rhob*(rhoub**2+rhovb**2+
-     >                                               rhowb**2)
+! userbc should have set e_internal to Dirichlet state (supersonic) or p-/(gm-1)
+! here and only here is e_internal density-weighted.
+         up(5,l) = e_internal+0.5*rho*(ux**2+uy**2+uz**2)
+         up(5,l) = up(5,l)*phi
 
       enddo
       enddo

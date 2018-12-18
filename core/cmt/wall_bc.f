@@ -26,6 +26,7 @@ C> @file wall_bc.f Dirichlet states for wall boundary conditions
 ! JH031617 Collis (CTR 2002-ish), Hartmann & Houston (2006-8) probably BR
 !          and Dolejsi and Feistauer (2015) (check that)
 !          all say YES, inviscid rind and viscous rind are different.
+! JH121618 paresi too entropy-stable wallbc
       call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)    
       ieg=lglel(e)
       l=0
@@ -87,86 +88,84 @@ C> @file wall_bc.f Dirichlet states for wall boundary conditions
       return
       end
 
-      subroutine wallbc_inviscid(nstate,f,e,facew,wbc)
+      subroutine wallbc_inviscid(f,e,wm,wp,um,up,nvar)
       INCLUDE 'SIZE'
-      INCLUDE 'INPUT'
-      include 'CMTBCDATA'
 
       integer nstate,f,e
-      real    facew(lx1*lz1,2*ldim,nelt,nstate)
-      real    wbc(lx1*lz1,2*ldim,nelt,nstate) 
+      real wminus(nvar,lx1*lz1),wplus(nvar,lx1*lz1),
+     >     uminus(toteq,lx1*lz1),uplus(toteq,lx1*lz1)
 
 ! JH102016
 ! rind state for inviscid fluxes is different from viscous fluxes
-      call reflect_rind(nstate,f,e,facew,wbc)
+      call reflect_rind(f,e,wminus,wplus,uminus,uplus,nvar)
 
       return
       end
 
-      subroutine reflect_rind(nvar,f,e,facew,wbc)
+      subroutine reflect_rind(f,e,wm,wp,um,up,nvar)
       include 'SIZE'
-      include 'CMTBCDATA'
+      include 'TOTAL'
       include 'CMTDATA'
-      include 'GEOM'
-      include 'INPUT'
-      include 'PARALLEL'
-      include 'DG'
-      include 'MASS'
-      include 'TSTEP'
       integer  f,e
-! JH091614 facew now has intent(inout)...
-! JH031315 not anymore. nobody changes qminus here. that's dumb
-      real facew(lx1*lz1,2*ldim,nelt,nvar)
-      real wbc(lx1*lz1,2*ldim,nelt,nvar)
-      integer i, nxz, fdim
+      real wm(nvar,lx1*lz1),wp(nvar,lx1*lz1),
+     >     um(toteq,lx1*lz1),up(toteq,lx1*lz1)
+      integer i, nxz, fdim, eq
       real nx,ny,nz,rl,ul,vl,wl,pl,fs
-      parameter (lfd1=lxd*lzd,lfc1=lx1*lz1)
 
       nxz=lx1*lz1
-      nxzd=lxd*lzd
-      fdim=ldim-1
-      ieg=lglel(e)
       ifield=1
 
-! I know this says slipwall, but to the inviscid terms all walls are
-! slip. or something.
       call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)    
-      do l=1,nxz
+      l=0
+      do iz=k0,k1
+      do iy=j0,j1
+      do ix=i0,i1
+         l=l+1
+         do eq=1,toteq
+            um(eq,l)=u(ix,iy,iz,eq,e)
+         enddo
+         wm(iraux,l)=vtrans(ix,iy,iz,e,irho)
+         wm(iux,l)=vx(ix,iy,iz,e)
+         wm(iuy,l)=vy(ix,iy,iz,e)
+         wm(iuz,l)=vz(ix,iy,iz,e)
+         wm(isnd,l)=csound(ix,iy,iz,e)
+         wm(ipr,l)=pr(ix,iy,iz,e)
+         wm(iph,l)=phig(ix,iy,iz,e)
+         wm(ithm,l)=t(ix,iy,iz,e,1)
          nx = unx(l,1,f,e)
          ny = uny(l,1,f,e)
          nz = unz(l,1,f,e)
-         rl = facew(l,f,e,irho)
+         rl = wm(iraux,l)
          rr = rl
-         ul = facew(l,f,e,iux)
-         vl = facew(l,f,e,iuy)
-         wl = facew(l,f,e,iuz)
-         fs = 0.0 ! no moving grid for awhile, and it will not look anything
-                  ! like RocFlu
+         ul = wm(iux,l)
+         vl = wm(iuy,l)
+         wl = wm(iuz,l)
+         phi= wm(iph,l)
+!        fs = 0.0 ! no moving grid for awhile, and it will not look anything
+!                 ! like RocFlu
 
 ! JH111516 Mirror a la' Dolejsi & Feistauer (2015) section 8.3.1.2
 ! JH021717 This is for inviscid fluxes, which are produced by the Riemann
-!          solver. Presently, this is AUSM, which acts on primitive variables
-!          as-coded. Still, it always makes sense to form UBC, so we do so
-!          here even though it is different for viscous BC
+!          solver.
          udotn = ul*nx+vl*ny+wl*nz
          ur = ul-2.0*udotn*nx
          vr = vl-2.0*udotn*ny
          wr = wl-2.0*udotn*nz
-         wbc(l,f,e,irho)= rr
-         wbc(l,f,e,iux) = ur
-         wbc(l,f,e,iuy) = vr
-         wbc(l,f,e,iuz) = wr
-         wbc(l,f,e,ipr) = facew(l,f,e,ipr)
-         wbc(l,f,e,ithm)= facew(l,f,e,ithm)
-         wbc(l,f,e,isnd)= facew(l,f,e,isnd)
-         wbc(l,f,e,iph) = facew(l,f,e,iph)
-         wbc(l,f,e,icvf)= facew(l,f,e,icvf)
-         wbc(l,f,e,icpf)= facew(l,f,e,icpf)
-         wbc(l,f,e,iu1)= facew(l,f,e,iu1)
-         wbc(l,f,e,iu2)= rr*ur
-         wbc(l,f,e,iu3)= rr*vr
-         wbc(l,f,e,iu4)= rr*wr
-         wbc(l,f,e,iu5)= facew(l,f,e,iu5)
+         wp(iraux,l)=rr
+         wp(iux,l) = ur
+         wp(iuy,l) = vr
+         wp(iuz,l) = wr
+         wp(ipr,l) = wm(ipr,l)
+         wp(ithm,l)= wm(ithm,l)
+         wp(isnd,l)= wm(isnd,l)
+         wp(iph,l) = wm(iph,l)
+         up(1,l)= um(1,l)
+         up(2,l)= phi*rr*ur
+         up(3,l)= phi*rr*vr
+         up(4,l)= phi*rr*wr
+         up(5,l)= um(5,l)
+      enddo
+      enddo
       enddo
 
       return

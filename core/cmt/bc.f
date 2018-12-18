@@ -30,7 +30,7 @@ C> Determining rind state for Dirichlet boundary conditions
 
       common /nekcb/ cb
       character*3 cb
-      parameter(lxz=lx1*lz1,lstate=5) ! KG is expecting 4.
+      parameter(lstate=5) ! KG is expecting 4.
                                       ! hopefully, this won't cause problems
       COMMON /SCRNS/ wminus(lstate,lxz),wplus(lstate,lxz),
      >               jaminus(3,lxz),japlus(3,lxz),
@@ -88,7 +88,7 @@ C> Determining rind state for Dirichlet boundary conditions
      >                           japlus,kennedygruber,lstate,nxz)
             do eq=1,toteq
             do i=1,nxz
-            flux(i,1,f,e,eq)=flux(i,1,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
+            flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
             enddo
             enddo
 ! stabilization flux
@@ -96,7 +96,7 @@ C> Determining rind state for Dirichlet boundary conditions
      >                           japlus,llf_euler,lstate,nxz)
             do eq=1,toteq
             do i=1,nxz
-            flux(i,1,f,e,eq)=flux(i,1,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
+            flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
             enddo
             enddo
 
