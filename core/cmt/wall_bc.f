@@ -88,7 +88,7 @@ C> @file wall_bc.f Dirichlet states for wall boundary conditions
       return
       end
 
-      subroutine wallbc_inviscid(f,e,wm,wp,um,up,nvar)
+      subroutine wallbc_inviscid(f,e,wminus,wplus,uminus,uplus,nvar)
       INCLUDE 'SIZE'
 
       integer nstate,f,e
