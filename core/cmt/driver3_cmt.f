@@ -51,7 +51,7 @@ C> conserved unknowns U
 ! now mass-specific
          call invcol2(energy,u(1,1,1,irg,e),nxyz)
 ! don't forget to get density where it belongs
-         call invcol3(vtrans(1,1,1,e,irho),u(1,1,1,irg,e),phig(1,1,1,e),
+         call invcol3(vtrans(1,1,1,e,jrho),u(1,1,1,irg,e),phig(1,1,1,e),
      >                nxyz)
 ! JH020718 long-overdue sanity checks
          emin=vlmin(energy,nxyz)
@@ -65,17 +65,6 @@ C> conserved unknowns U
       call poscheck(ifailr,'density    ')
       call poscheck(ifaile,'energy     ')
       call poscheck(ifailt,'temperature')
-
-! setup_convect has the desired effect
-! if IFPART=F
-! if IFCHAR=F
-! if IFCONS=T
-! if igeom .ne. 1
-! if param(99) .ge. 0
-!-----------------------------------------------------------------------
-!     call setup_convect(0)
-!-----------------------------------------------------------------------
-! to make life easier until we master this stuff and harmonize even better with nek,
 
       return
       end
@@ -112,8 +101,9 @@ c We have perfect gas law. Cvg is stored full field
             write(6,'(i6,a26,3i2,i8,e15.6)') ! might want to be less verbose
      >      nid,' HAS NEGATIVE TEMPERATURE ', i,j,k,eg,temp
          endif
-         vtrans(i,j,k,e,icp)= e_internal
-         vtrans(i,j,k,e,icv)= cv*rho
+         vtrans(i,j,k,e,jen)= e_internal
+         vtrans(i,j,k,e,jcv)= cv*rho
+         vtrans(i,j,k,e,jcp)= cp*rho
          t(i,j,k,e,1)       = temp
          pr(i,j,k,e)        = pres
          csound(i,j,k,e)    = asnd
@@ -137,18 +127,18 @@ c-----------------------------------------------------------------------
 !        varsic(eqnum)=u(ix,iy,iz,eqnum,e)  
 !     enddo
       phi  = phig  (ix,iy,iz,e)
-      rho  = vtrans(ix,iy,iz,e,irho)
+      rho  = vtrans(ix,iy,iz,e,jrho)
       pres = pr    (ix,iy,iz,e)
       if (rho.ne.0) then
-         cv   = vtrans(ix,iy,iz,e,icv)/rho
-!        cp   = vtrans(ix,iy,iz,e,icp)/rho
-         e_internal = vtrans(ix,iy,iz,e,icp)
+         cv   = vtrans(ix,iy,iz,e,jcv)/rho
+         cp   = vtrans(ix,iy,iz,e,jcp)/rho
+         e_internal = vtrans(ix,iy,iz,e,jen)
       endif
       asnd = csound(ix,iy,iz,e)
-      mu     = vdiff(ix,iy,iz,e,imu)
-      udiff  = vdiff(ix,iy,iz,e,iknd)
+      mu     = vdiff(ix,iy,iz,e,jmu)
+      udiff  = vdiff(ix,iy,iz,e,jknd)
 ! MAKE SURE WE''RE NOT USING UTRANS FOR ANYTHING IN pre-v16 code!!
-      lambda = vdiff(ix,iy,iz,e,ilam)
+      lambda = vdiff(ix,iy,iz,e,jlam)
 
       return
       end
@@ -255,9 +245,10 @@ c     ! save velocity on fine mesh for dealiasing
             vx(i,j,k,e) = ux
             vy(i,j,k,e) = uy
             vz(i,j,k,e) = uz
-            vtrans(i,j,k,e,irho)  = rho
-            vtrans(i,j,k,e,icv)= rho*cv
-            vtrans(i,j,k,e,icp)= e_internal
+            vtrans(i,j,k,e,jrho)  = rho
+            vtrans(i,j,k,e,jcv)= rho*cv
+            vtrans(i,j,k,e,jcp)= rho*cp
+            vtrans(i,j,k,e,jen)= e_internal
             phig(i,j,k,e)  = phi
             pr(i,j,k,e)    = pres
             u(i,j,k,irg,e) = phi*rho
@@ -265,9 +256,9 @@ c     ! save velocity on fine mesh for dealiasing
             u(i,j,k,irpv,e)= phi*rho*uy
             u(i,j,k,irpw,e)= phi*rho*uz
             u(i,j,k,iret,e)=phi*rho*(e_internal+0.5*(ux**2+uy**2+uz**2))
-            vdiff(i,j,k,e,imu) = mu
-            vdiff(i,j,k,e,iknd)= udiff
-            vdiff(i,j,k,e,ilam)= lambda
+            vdiff(i,j,k,e,jmu) = mu
+            vdiff(i,j,k,e,jknd)= udiff
+            vdiff(i,j,k,e,jlam)= lambda
             t(i,j,k,e,1) = temp
          enddo
          enddo

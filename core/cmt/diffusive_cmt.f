@@ -75,7 +75,7 @@ C> umubc = \f$\mathbf{U}^--\mathbf{U}^D\f$
 ! JH111416 This may look like lazy duplication, but there is a good chance
 !          that this may replace/consolidate BC calls in InviscidFlus.
 !          basically, nothing in wplus is trustworthy, so we are going to
-!          recompute and overwrite iu1 through iu5 in wplus with stuff we
+!          recompute and overwrite ju1 through ju5 in wplus with stuff we
 !          do trust (UBC, to be exact).
 !           if (cb.eq.'v  ' .or. cb .eq. 'V  ') then
 !             call inflow2(nqq,f,e,wminus,wplus)
@@ -86,8 +86,8 @@ C> umubc = \f$\mathbf{U}^--\mathbf{U}^D\f$
 !  -
 ! U - UBC
             do ivar=1,toteq
-               call sub3(umubc(1,f,e,ivar),wminus(1,f,e,iu1+ivar-1),
-     >                                      wplus(1,f,e,iu1+ivar-1),nxz)
+               call sub3(umubc(1,f,e,ivar),wminus(1,f,e,ju1+ivar-1),
+     >                                      wplus(1,f,e,ju1+ivar-1),nxz)
             enddo
 
          endif 

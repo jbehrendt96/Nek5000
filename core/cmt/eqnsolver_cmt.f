@@ -211,17 +211,17 @@ C> @}
       real ja(lx1,ly1,lz1,ldim,ldim)   ! rst outermost
 ! scratch element for extra variables (hardcoded) and conserved variables U
 ! transposed to quantity-innermost. unvectorizable?
-      common /scrns/ waux (4,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
-     >               wauxt(lx1*ly1*lz1,4),jat(3,3,lx1,ly1,lz1)
+      common /scrns/ waux (nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
+     >               wauxt(lx1*ly1*lz1,nparm),jat(3,3,lx1,ly1,lz1)
       real waux,ut,wauxt,jat
       real flx(5)
 
       nxyz=lx1*ly1*lz1
-      call copy(wauxt(1,1),vx(1,1,1,e),nxyz)
-      call copy(wauxt(1,2),vy(1,1,1,e),nxyz)
-      call copy(wauxt(1,3),vz(1,1,1,e),nxyz)
-      call copy(wauxt(1,4),pr(1,1,1,e),nxyz)
-      call transpose(waux,4,wauxt,nxyz)
+      call copy(wauxt(1,iux),vx(1,1,1,e),nxyz)
+      call copy(wauxt(1,iuy),vy(1,1,1,e),nxyz)
+      call copy(wauxt(1,iuz),vz(1,1,1,e),nxyz)
+      call copy(wauxt(1,ipr),pr(1,1,1,e),nxyz)
+      call transpose(waux,nparm,wauxt,nxyz)
       call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
 
       call rzero(jat,9*lx1*ly1*lz1)
@@ -305,18 +305,18 @@ C> @}
       real fcons(lx1,ly1,lz1,3,toteq)   ! consistent ``1-point'' flux
 ! scratch element for extra variables (hardcoded) and conserved variables U
 ! transposed to quantity-innermost. unvectorizable?
-      common /scrns/ waux (4,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
-     >               wauxt(lx1*ly1*lz1,4),jat(3,3,lx1,ly1,lz1)
+      common /scrns/ waux (nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
+     >               wauxt(lx1*ly1*lz1,nparm),jat(3,3,lx1,ly1,lz1)
      >              ,rhsscr(lx1,toteq)
       real waux,ut,wauxt,jat,rhsscr
       real flx(5)
 
       nxyz=lx1*ly1*lz1
-      call copy(wauxt(1,1),vx(1,1,1,e),nxyz)
-      call copy(wauxt(1,2),vy(1,1,1,e),nxyz)
-      call copy(wauxt(1,3),vz(1,1,1,e),nxyz)
-      call copy(wauxt(1,4),pr(1,1,1,e),nxyz)
-      call transpose(waux,4,wauxt,nxyz)
+      call copy(wauxt(1,iux),vx(1,1,1,e),nxyz)
+      call copy(wauxt(1,iuy),vy(1,1,1,e),nxyz)
+      call copy(wauxt(1,iuz),vz(1,1,1,e),nxyz)
+      call copy(wauxt(1,ipr),pr(1,1,1,e),nxyz)
+      call transpose(waux,nparm,wauxt,nxyz)
       call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
 
       call rzero(jat,9*lx1*ly1*lz1)
@@ -453,18 +453,18 @@ C> @}
       real fcons(lx1,ly1,lz1,3,toteq)   ! consistent ``1-point'' flux
 ! scratch element for extra variables (hardcoded) and conserved variables U
 ! transposed to quantity-innermost. unvectorizable?
-      common /scrns/ waux (4,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
-     >               wauxt(lx1*ly1*lz1,4),jat(3,3,lx1,ly1,lz1)
+      common /scrns/ waux (nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
+     >               wauxt(lx1*ly1*lz1,nparm),jat(3,3,lx1,ly1,lz1)
      >              ,rhsscr(lx1,toteq)
       real waux,ut,wauxt,jat,rhsscr
       real flx(5)
 
       nxyz=lx1*ly1*lz1
-      call copy(wauxt(1,1),vx(1,1,1,e),nxyz)
-      call copy(wauxt(1,2),vy(1,1,1,e),nxyz)
-      call copy(wauxt(1,3),vz(1,1,1,e),nxyz)
-      call copy(wauxt(1,4),pr(1,1,1,e),nxyz)
-      call transpose(waux,4,wauxt,nxyz)
+      call copy(wauxt(1,iux),vx(1,1,1,e),nxyz)
+      call copy(wauxt(1,iuy),vy(1,1,1,e),nxyz)
+      call copy(wauxt(1,iuz),vz(1,1,1,e),nxyz)
+      call copy(wauxt(1,ipr),pr(1,1,1,e),nxyz)
+      call transpose(waux,nparm,wauxt,nxyz)
       call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
 
       call rzero(jat,9*lx1*ly1*lz1)

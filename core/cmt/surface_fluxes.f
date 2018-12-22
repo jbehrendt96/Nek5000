@@ -45,23 +45,22 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 ! just multipy by {{phi}}
 ! until we can verify correct multiphase two-point fluxes
 !     call faceu(1,fatface(iwm+nfq*(irho-1)))
-      call fillq(iux, vx,    fatface(iwm),fatface(iwp))
-      call fillq(iuy, vy,    fatface(iwm),fatface(iwp))
-      call fillq(iuz, vz,    fatface(iwm),fatface(iwp))
-      call fillq(iph, phig,  fatface(iwm),fatface(iwp))
+      call fillq(jux, vx,    fatface(iwm),fatface(iwp))
+      call fillq(juy, vy,    fatface(iwm),fatface(iwp))
+      call fillq(juz, vz,    fatface(iwm),fatface(iwp))
+      call fillq(jph, phig,  fatface(iwm),fatface(iwp))
 
 ! stabilization first.
-      call fillq(isnd,csound,fatface(iwm),fatface(iwp))
+      call fillq(jsnd,csound,fatface(iwm),fatface(iwp))
       call fstab(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
 
 ! need total energy, not internal
-      i_cvars=(iu5-1)*nfq+1
+      i_cvars=(ju5-1)*nfq+1
 !     call faceu(toteq,fatface(i_cvars)) ! should persist from llf_euler
-      call invcol2(fatface(i_cvars),fatface(iwm+nfq*(iph-1)),nfq)
+      call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
 
-
-      call fillq(irho,vtrans,fatface(iwm),fatface(iwp))
-      call fillq(ipr, pr,    fatface(iwm),fatface(iwp))
+      call fillq(jrho,vtrans,fatface(iwm),fatface(iwp))
+      call fillq(jpr, pr,    fatface(iwm),fatface(iwp))
 
 ! q- -> z-. Kennedy-Gruber, Pirozzoli, and most energy-
 !           conserving fluxes have z=q, so I just divide total energy by
@@ -76,7 +75,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 !           local to a given element.
       call fsharp(fatface(iwm),fatface(iflx),nstate,toteq)
 
-!     i_cvars=iwm!(iu1-1)*nfq+1
+!     i_cvars=iwm!(ju1-1)*nfq+1
 !     do eq=1,toteq
 !        call faceu(eq,fatface(i_cvars))
 !        i_cvars=i_cvars+nfq
@@ -109,7 +108,7 @@ C> @}
 
 !-----------------------------------------------------------------------
 
-      subroutine fillq(ivar,field,wminus,yourface)
+      subroutine fillq(jvar,field,wminus,yourface)
       include 'SIZE'
       include 'DG'
 
@@ -126,7 +125,7 @@ C> @}
       call full2face_cmt(nelt,lx1,ly1,lz1,iface_flux,yourface,field)
 
       do i=1,ndg_face
-         wminus(i,ivar)=yourface(i,1,1,1)
+         wminus(i,jvar)=yourface(i,1,1,1)
       enddo
 
       return
@@ -312,25 +311,25 @@ C> @}
             call map_faced(ny,uny(1,1,f,e),lx1,lxd,fdim,0)
             call map_faced(nz,unz(1,1,f,e),lx1,lxd,fdim,0)
 
-            call map_faced(rl,wminus(1,f,e,irho),lx1,lxd,fdim,0)
-            call map_faced(ul,wminus(1,f,e,iux),lx1,lxd,fdim,0)
-            call map_faced(vl,wminus(1,f,e,iuy),lx1,lxd,fdim,0)
-            call map_faced(wl,wminus(1,f,e,iuz),lx1,lxd,fdim,0)
-            call map_faced(pl,wminus(1,f,e,ipr),lx1,lxd,fdim,0)
-            call map_faced(tl,wminus(1,f,e,ithm),lx1,lxd,fdim,0)
-            call map_faced(al,wminus(1,f,e,isnd),lx1,lxd,fdim,0)
-            call map_faced(el,wminus(1,f,e,icpf),lx1,lxd,fdim,0)
+            call map_faced(rl,wminus(1,f,e,jrho),lx1,lxd,fdim,0)
+            call map_faced(ul,wminus(1,f,e,jux),lx1,lxd,fdim,0)
+            call map_faced(vl,wminus(1,f,e,juy),lx1,lxd,fdim,0)
+            call map_faced(wl,wminus(1,f,e,juz),lx1,lxd,fdim,0)
+            call map_faced(pl,wminus(1,f,e,jpr),lx1,lxd,fdim,0)
+            call map_faced(tl,wminus(1,f,e,jthm),lx1,lxd,fdim,0)
+            call map_faced(al,wminus(1,f,e,jsnd),lx1,lxd,fdim,0)
+            call map_faced(el,wminus(1,f,e,jen),lx1,lxd,fdim,0)
 
-            call map_faced(rr,wplus(1,f,e,irho),lx1,lxd,fdim,0)
-            call map_faced(ur,wplus(1,f,e,iux),lx1,lxd,fdim,0)
-            call map_faced(vr,wplus(1,f,e,iuy),lx1,lxd,fdim,0)
-            call map_faced(wr,wplus(1,f,e,iuz),lx1,lxd,fdim,0)
-            call map_faced(pr,wplus(1,f,e,ipr),lx1,lxd,fdim,0)
-            call map_faced(tr,wplus(1,f,e,ithm),lx1,lxd,fdim,0)
-            call map_faced(ar,wplus(1,f,e,isnd),lx1,lxd,fdim,0)
-            call map_faced(er,wplus(1,f,e,icpf),lx1,lxd,fdim,0)
+            call map_faced(rr,wplus(1,f,e,jrho),lx1,lxd,fdim,0)
+            call map_faced(ur,wplus(1,f,e,jux),lx1,lxd,fdim,0)
+            call map_faced(vr,wplus(1,f,e,juy),lx1,lxd,fdim,0)
+            call map_faced(wr,wplus(1,f,e,juz),lx1,lxd,fdim,0)
+            call map_faced(pr,wplus(1,f,e,jpr),lx1,lxd,fdim,0)
+            call map_faced(tr,wplus(1,f,e,jthm),lx1,lxd,fdim,0)
+            call map_faced(ar,wplus(1,f,e,jsnd),lx1,lxd,fdim,0)
+            call map_faced(er,wplus(1,f,e,jen),lx1,lxd,fdim,0)
 
-            call map_faced(phl,wminus(1,f,e,iph),lx1,lxd,fdim,0)
+            call map_faced(phl,wminus(1,f,e,jph),lx1,lxd,fdim,0)
 
             call invcol3(jaco_c,area(1,1,f,e),w2m1,nxz)
             call map_faced(jaco_f,jaco_c,lx1,lxd,fdim,0) 
@@ -341,25 +340,25 @@ C> @}
             call copy(ny,uny(1,1,f,e),nxz)
             call copy(nz,unz(1,1,f,e),nxz)
 
-            call copy(rl,wminus(1,f,e,irho),nxz)
-            call copy(ul,wminus(1,f,e,iux),nxz)
-            call copy(vl,wminus(1,f,e,iuy),nxz)
-            call copy(wl,wminus(1,f,e,iuz),nxz)
-            call copy(pl,wminus(1,f,e,ipr),nxz)
-            call copy(tl,wminus(1,f,e,ithm),nxz)
-            call copy(al,wminus(1,f,e,isnd),nxz)
-            call copy(el,wminus(1,f,e,icpf),nxz)
+            call copy(rl,wminus(1,f,e,jrho),nxz)
+            call copy(ul,wminus(1,f,e,jux),nxz)
+            call copy(vl,wminus(1,f,e,juy),nxz)
+            call copy(wl,wminus(1,f,e,juz),nxz)
+            call copy(pl,wminus(1,f,e,jpr),nxz)
+            call copy(tl,wminus(1,f,e,jthm),nxz)
+            call copy(al,wminus(1,f,e,jsnd),nxz)
+            call copy(el,wminus(1,f,e,jcpf),nxz)
 
-            call copy(rr,wplus(1,f,e,irho),nxz)
-            call copy(ur,wplus(1,f,e,iux),nxz)
-            call copy(vr,wplus(1,f,e,iuy),nxz)
-            call copy(wr,wplus(1,f,e,iuz),nxz)
-            call copy(pr,wplus(1,f,e,ipr),nxz)
-            call copy(tr,wplus(1,f,e,ithm),nxz)
-            call copy(ar,wplus(1,f,e,isnd),nxz)
-            call copy(er,wplus(1,f,e,icpf),nxz)
+            call copy(rr,wplus(1,f,e,jrho),nxz)
+            call copy(ur,wplus(1,f,e,jux),nxz)
+            call copy(vr,wplus(1,f,e,juy),nxz)
+            call copy(wr,wplus(1,f,e,juz),nxz)
+            call copy(pr,wplus(1,f,e,jpr),nxz)
+            call copy(tr,wplus(1,f,e,jthm),nxz)
+            call copy(ar,wplus(1,f,e,jsnd),nxz)
+            call copy(er,wplus(1,f,e,jen),nxz)
 
-            call copy(phl,wminus(1,f,e,iph),nxz)
+            call copy(phl,wminus(1,f,e,jph),nxz)
 
             call copy(jaco_f,jface(1,1,f,e),nxz) 
          endif
@@ -611,26 +610,27 @@ C> @}
       iwp =iwm+nstate*nfq
       iflx=iwp+nstate*nfq
  
-      call fillq(irho,vtrans,fatface(iwm),fatface(iwp))
-      call fillq(iux, vx,    fatface(iwm),fatface(iwp))
-      call fillq(iuy, vy,    fatface(iwm),fatface(iwp))
-      call fillq(iuz, vz,    fatface(iwm),fatface(iwp))
-      call fillq(ipr, pr,    fatface(iwm),fatface(iwp))
-      call fillq(ithm,t,     fatface(iwm),fatface(iwp))
-      call fillq(isnd,csound,fatface(iwm),fatface(iwp))
-      call fillq(iph, phig,  fatface(iwm),fatface(iwp))
-      call fillq(icvf,vtrans(1,1,1,1,icv),fatface(iwm),fatface(iwp))
-      call fillq(icpf,vtrans(1,1,1,1,icp),fatface(iwm),fatface(iwp))
-      call fillq(imuf, vdiff(1,1,1,1,imu), fatface(iwm),fatface(iwp))
-      call fillq(ikndf,vdiff(1,1,1,1,iknd),fatface(iwm),fatface(iwp))
-      call fillq(ilamf,vdiff(1,1,1,1,ilam),fatface(iwm),fatface(iwp))
+      call fillq(jrho,vtrans,fatface(iwm),fatface(iwp))
+      call fillq(jux, vx,    fatface(iwm),fatface(iwp))
+      call fillq(juy, vy,    fatface(iwm),fatface(iwp))
+      call fillq(juz, vz,    fatface(iwm),fatface(iwp))
+      call fillq(jpr, pr,    fatface(iwm),fatface(iwp))
+      call fillq(jthm,t,     fatface(iwm),fatface(iwp))
+      call fillq(jsnd,csound,fatface(iwm),fatface(iwp))
+      call fillq(jph, phig,  fatface(iwm),fatface(iwp))
+      call fillq(jcvf,vtrans(1,1,1,1,jcv),fatface(iwm),fatface(iwp))
+      call fillq(jcpf,vtrans(1,1,1,1,jcp),fatface(iwm),fatface(iwp))
+      call fillq(jen,vtrans(1,1,1,1,jen),fatface(iwm),fatface(iwp))
+      call fillq(jmuf, vdiff(1,1,1,1,jmu), fatface(iwm),fatface(iwp))
+      call fillq(jkndf,vdiff(1,1,1,1,jknd),fatface(iwm),fatface(iwp))
+      call fillq(jlamf,vdiff(1,1,1,1,jlam),fatface(iwm),fatface(iwp))
 
-      i_cvars=(iu1-1)*nfq+1
+      i_cvars=(ju1-1)*nfq+1
       do eq=1,toteq
          call faceu(eq,fatface(i_cvars))
 ! JH080317 at least get the product rule right until we figure out how
 !          we want the governing equations to look
-         call invcol2(fatface(i_cvars),fatface(iwm+nfq*(iph-1)),nfq)
+         call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
          i_cvars=i_cvars+nfq
       enddo
       call face_state_commo(fatface(iwm),fatface(iwp),nfq,nstate
@@ -720,46 +720,46 @@ C> @}
          call copy(ny,uny(1,1,f,e),nxz)
          call copy(nz,unz(1,1,f,e),nxz)
 
-         call copy(rl,wminus(1,f,e,irho),nxz)
+         call copy(rl,wminus(1,f,e,jrho),nxz)
 
          if(if3d) then
-            call vdot3(ul,wminus(1,f,e,iux),wminus(1,f,e,iuy),
-     >                    wminus(1,f,e,iuz),nx,ny,nz,nxz)
-            call vdot3(vl,wminus(1,f,e,iux),wminus(1,f,e,iuy),
-     >wminus(1,f,e,iuz),t1x(1,1,f,e),t1y(1,1,f,e),t1z(1,1,f,e),nxz)
-            call vdot3(wl,wminus(1,f,e,iux),wminus(1,f,e,iuy),
-     >wminus(1,f,e,iuz),t2x(1,1,f,e),t2y(1,1,f,e),t2z(1,1,f,e),nxz)
-            call vdot3(ur,wplus(1,f,e,iux),wplus(1,f,e,iuy),
-     >                    wplus(1,f,e,iuz),nx,ny,nz,nxz)
-            call vdot3(vr,wplus(1,f,e,iux),wplus(1,f,e,iuy),
-     >wplus(1,f,e,iuz),t1x(1,1,f,e),t1y(1,1,f,e),t1z(1,1,f,e),nxz)
-            call vdot3(wr,wplus(1,f,e,iux),wplus(1,f,e,iuy),
-     >wplus(1,f,e,iuz),t2x(1,1,f,e),t2y(1,1,f,e),t2z(1,1,f,e),nxz)
+            call vdot3(ul,wminus(1,f,e,jux),wminus(1,f,e,juy),
+     >                    wminus(1,f,e,juz),nx,ny,nz,nxz)
+            call vdot3(vl,wminus(1,f,e,jux),wminus(1,f,e,juy),
+     >wminus(1,f,e,juz),t1x(1,1,f,e),t1y(1,1,f,e),t1z(1,1,f,e),nxz)
+            call vdot3(wl,wminus(1,f,e,jux),wminus(1,f,e,juy),
+     >wminus(1,f,e,juz),t2x(1,1,f,e),t2y(1,1,f,e),t2z(1,1,f,e),nxz)
+            call vdot3(ur,wplus(1,f,e,jux),wplus(1,f,e,juy),
+     >                    wplus(1,f,e,juz),nx,ny,nz,nxz)
+            call vdot3(vr,wplus(1,f,e,jux),wplus(1,f,e,juy),
+     >wplus(1,f,e,juz),t1x(1,1,f,e),t1y(1,1,f,e),t1z(1,1,f,e),nxz)
+            call vdot3(wr,wplus(1,f,e,jux),wplus(1,f,e,juy),
+     >wplus(1,f,e,juz),t2x(1,1,f,e),t2y(1,1,f,e),t2z(1,1,f,e),nxz)
          else
-            call vdot2(ul,wminus(1,f,e,iux),wminus(1,f,e,iuy),
+            call vdot2(ul,wminus(1,f,e,jux),wminus(1,f,e,juy),
      >                    nx,ny,nxz)
-            call vdot2(vl,wminus(1,f,e,iux),wminus(1,f,e,iuy),
+            call vdot2(vl,wminus(1,f,e,jux),wminus(1,f,e,juy),
      >                 t1x(1,1,f,e),t1y(1,1,f,e),nxz)
             call rzero(wl,nxz)
-            call vdot2(ur,wplus(1,f,e,iux),wplus(1,f,e,iuy),
+            call vdot2(ur,wplus(1,f,e,jux),wplus(1,f,e,juy),
      >                    nx,ny,nxz)
-            call vdot2(vr,wplus(1,f,e,iux),wplus(1,f,e,iuy),
+            call vdot2(vr,wplus(1,f,e,jux),wplus(1,f,e,juy),
      >                 t1x(1,1,f,e),t1y(1,1,f,e),nxz)
             call rzero(wr,nxz)
          endif
 
-         call copy(pl,wminus(1,f,e,ipr),nxz)
-         call copy(tl,wminus(1,f,e,ithm),nxz)
-         call copy(al,wminus(1,f,e,isnd),nxz)
-         call copy(el,wminus(1,f,e,icpf),nxz)
+         call copy(pl,wminus(1,f,e,jpr),nxz)
+         call copy(tl,wminus(1,f,e,jthm),nxz)
+         call copy(al,wminus(1,f,e,jsnd),nxz)
+         call copy(el,wminus(1,f,e,jcpf),nxz)
 
-         call copy(rr,wplus(1,f,e,irho),nxz)
-         call copy(pr,wplus(1,f,e,ipr),nxz)
-         call copy(tr,wplus(1,f,e,ithm),nxz)
-         call copy(ar,wplus(1,f,e,isnd),nxz)
-         call copy(er,wplus(1,f,e,icpf),nxz)
+         call copy(rr,wplus(1,f,e,jrho),nxz)
+         call copy(pr,wplus(1,f,e,jpr),nxz)
+         call copy(tr,wplus(1,f,e,jthm),nxz)
+         call copy(ar,wplus(1,f,e,jsnd),nxz)
+         call copy(er,wplus(1,f,e,jcpf),nxz)
 
-         call copy(phl,wminus(1,f,e,iph),nxz)
+         call copy(phl,wminus(1,f,e,jph),nxz)
 
          call copy(jaco_f,jface(1,1,f,e),nxz) 
          do i=1,nxz

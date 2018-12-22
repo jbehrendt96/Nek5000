@@ -190,22 +190,22 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 ! which I now make the following be'neon-billboarded assumption:
 !***********************************************************************
 ! ASSUME CONSERVED VARS U1 THROUGH U5 ARE CONTIGUOUSLY STORED
-! SEQUENTIALLY IN /CMTSURFLX/ i.e. that iu2=iu1+1, etc.
+! SEQUENTIALLY IN /CMTSURFLX/ i.e. that ju2=ju1+1, etc.
 ! CMTDATA BETTA REFLECT THIS!!!
 !***********************************************************************
 C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}^{\intercal}\nabla v\}\} \cdot \left[\mathbf{U}\right] dA\f$
       if (1 .eq. 2) then
 ! JH070918 conserved variables done here.
-      i_cvars=(iu1-1)*nfq+1
+      i_cvars=(ju1-1)*nfq+1
       do eq=1,toteq
          call faceu(eq,fatface(i_cvars))
 ! JH080317 at least get the product rule right until we figure out how
 !          we want the governing equations to look
-         call invcol2(fatface(i_cvars),fatface(iwm+nfq*(iph-1)),nfq)
+         call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
          i_cvars=i_cvars+nfq
       enddo
-      ium=(iu1-1)*nfq+iwm
-      iup=(iu1-1)*nfq+iwp
+      ium=(ju1-1)*nfq+iwm
+      iup=(ju1-1)*nfq+iwp
       call   imqqtu(flux(iuj),flux(ium),flux(iup))
       call   imqqtu_dirichlet(flux(iuj),flux(iwm),flux(iwp))
       call igtu_cmt(flux(iwm),flux(iuj),graduf) ! [[u]].{{gradv}}
@@ -262,7 +262,8 @@ C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}\nabla \mathbf{U}\}\} \cdot \left[v\righ
       enddo
 
       dumchars='end_of_rhs'
-!     call dumpresidue(dumchars,999)
+      call dumpresidue(dumchars,999)
+      call exitt
 
       return
       end

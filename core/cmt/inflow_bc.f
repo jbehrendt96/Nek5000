@@ -9,6 +9,14 @@ C> wrapper for other BC routines. Just one for now. More to come.
      >     uminus(toteq,lx1*lz1),uplus(toteq,lx1*lz1)
 
       call inflow_df(f,e,wminus,wplus,uminus,uplus,nvar)
+! diagnostic
+      do i=1,lxz
+         write(57,'(a6,2i4,10e15.7)')'f,e,w-',f,e,(wminus(j,i),j=1,nvar)
+         write(58,'(a6,2i4,10e15.7)')'f,e,w+',f,e,(wplus(j,i),j=1,nvar)
+         write(59,'(a6,2i4,5e15.7)')'f,e,u-',f,e,(uminus(j,i),j=1,toteq)
+         write(60,'(a6,2i4,5e15.7)')'f,e,u+',f,e,(uplus(j,i),j=1,toteq)
+      enddo
+! diagnostic
 
       return
       end
@@ -55,11 +63,11 @@ c                                     !     ux,uy,uz
          snx  = unx(l,1,f,e)
          sny  = uny(l,1,f,e)
 
-!        rho  = facew(l,f,e,iu1)/facew(l,f,e,iph)
-!        rhou = facew(l,f,e,iu2)/facew(l,f,e,iph)
-!        rhov = facew(l,f,e,iu3)/facew(l,f,e,iph)
-!        rhow = facew(l,f,e,iu4)/facew(l,f,e,iph)
-!        rhoe = facew(l,f,e,iu5)/facew(l,f,e,iph)
+!        rho  = facew(l,f,e,ju1)/facew(l,f,e,jph)
+!        rhou = facew(l,f,e,ju2)/facew(l,f,e,jph)
+!        rhov = facew(l,f,e,ju3)/facew(l,f,e,jph)
+!        rhow = facew(l,f,e,ju4)/facew(l,f,e,jph)
+!        rhoe = facew(l,f,e,ju5)/facew(l,f,e,jph)
          rho  = u(ix,iy,iz,1,e)/phig(ix,iy,iz,e)
          rhou = u(ix,iy,iz,2,e)/phig(ix,iy,iz,e)
          rhov = u(ix,iy,iz,3,e)/phig(ix,iy,iz,e)
@@ -80,20 +88,20 @@ c                                     !     ux,uy,uz
      >                       ,molarmass,rho,rhou,rhov,rhow,rhob,rhoub
      >                       ,rhovb,rhowb,rhoeb,pres,asnd,temp)
          
-         wbc(l,irho) = rhob
-         wbc(l,iux)  = ux
-         wbc(l,iuy)  = uy
-         wbc(l,iuz)  = uz
-         wbc(l,isnd) = asnd ! overwritten by Bcond
-         wbc(l,ipr)  = pres ! overwritten by Bcond
-         wbc(l,ithm) = temp ! overwritten by Bcond
-         wbc(l,icpf) = rho*cp
-         wbc(l,icvf) = rho*cv
-         wbc(l,iu1)  = rhob*phi
-         wbc(l,iu2)  = rhoub*phi
-         wbc(l,iu3)  = rhovb*phi
-         wbc(l,iu4)  = rhowb*phi
-         wbc(l,iu5)  = rhoeb*phi
+         wbc(l,jrho) = rhob
+         wbc(l,jux)  = ux
+         wbc(l,juy)  = uy
+         wbc(l,juz)  = uz
+         wbc(l,jsnd) = asnd ! overwritten by Bcond
+         wbc(l,jpr)  = pres ! overwritten by Bcond
+         wbc(l,jthm) = temp ! overwritten by Bcond
+         wbc(l,jcpf) = rho*cp
+         wbc(l,jcvf) = rho*cv
+         wbc(l,ju1)  = rhob*phi
+         wbc(l,ju2)  = rhoub*phi
+         wbc(l,ju3)  = rhovb*phi
+         wbc(l,ju4)  = rhowb*phi
+         wbc(l,ju5)  = rhoeb*phi
       enddo
       enddo
       enddo
@@ -140,7 +148,7 @@ C> Hartmann & Houston (2006). A poor default.
          wm(iuz,l)=vz(ix,iy,iz,e)
          wm(ipr,l)=pr(ix,iy,iz,e)
          wm(ithm,l)=t(ix,iy,iz,e,1)
-         wm(iraux,l)=vtrans(ix,iy,iz,e,irho)
+         wm(irho,l)=vtrans(ix,iy,iz,e,jrho)
          wm(isnd,l)=csound(ix,iy,iz,e)
          wm(iph,l)=phig(ix,iy,iz,e)
 
@@ -148,7 +156,7 @@ C> Hartmann & Houston (2006). A poor default.
          wp(iuy,l)= uy   ! Dirichlet, userbc
          wp(iuz,l)= uz   ! Dirichlet, userbc
          wp(iph,l)  = phi  ! Dirichlet, userbc.
-         wp(iraux,l)=rho  ! Dirichlet, userbc
+         wp(irho,l)=rho  ! Dirichlet, userbc
          up(1,l)= rho*phi
          up(2,l)= rho*ux*phi
          up(3,l)= rho*uy*phi

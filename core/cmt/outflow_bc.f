@@ -9,6 +9,14 @@ C> wrapper for other BC routines. Just one for now. More to come.
      >     uminus(toteq,lx1*lz1),uplus(toteq,lx1*lz1)
 
       call outflow_df(f,e,wminus,wplus,uminus,uplus,nvar)
+! diagnostic
+      do i=1,lxz
+         write(57,'(a6,2i4,10e15.7)')'f,e,w-',f,e,(wminus(j,i),j=1,nvar)
+         write(58,'(a6,2i4,10e15.7)')'f,e,w+',f,e,(wplus(j,i),j=1,nvar)
+         write(59,'(a6,2i4,5e15.7)')'f,e,u-',f,e,(uminus(j,i),j=1,toteq)
+         write(60,'(a6,2i4,5e15.7)')'f,e,u+',f,e,(uplus(j,i),j=1,toteq)
+      enddo
+! diagnostic
 
       return
       end
@@ -52,7 +60,7 @@ C> Hartmann & Houston (2006). A poor default.
          wm(iuz,l)=vz(ix,iy,iz,e)
          wm(ipr,l)=pr(ix,iy,iz,e)
          wm(ithm,l)=t(ix,iy,iz,e,1)
-         wm(iraux,l)=vtrans(ix,iy,iz,e,irho)
+         wm(irho,l)=vtrans(ix,iy,iz,e,jrho)
          wm(isnd,l)=csound(ix,iy,iz,e)
          wm(iph,l)=phig(ix,iy,iz,e)
 
@@ -60,7 +68,7 @@ C> Hartmann & Houston (2006). A poor default.
          wp(iuy,l)= wm(iuy,l)
          wp(iuz,l)= wm(iuz,l)
          wp(iph,l)  = wm(iph,l)
-         wp(iraux,l)= wm(iraux,l)
+         wp(irho,l)= wm(irho,l)
          call copy(up(1,l),um(1,l),4)
 
          snx  = unx(l,1,f,e)
@@ -74,7 +82,7 @@ C> Hartmann & Houston (2006). A poor default.
             wp(ipr,l)  = pres ! userbc should have set this to pinfty
             wp(isnd,l) = asnd ! userbc should have set this to a(pinfty,rho-)
             wp(ithm,l) = temp   ! userbc should have set this to T(pinfty,rho-)
-!           up(5,l)=wm(irho,l)*e_internal ! userbc plz set e_internal(temp)
+!           up(5,l)=wm(jrho,l)*e_internal ! userbc plz set e_internal(temp)
             up(5,l)=e_internal ! here AND ONLY HERE is e_internal density-weighted
      >          +0.5*wm(irho,l)*(wm(iux,l)**2+wm(iuy,l)**2+wm(iux,l)**2)
             up(5,l)=up(5,l)*wm(iph,l)
@@ -138,10 +146,10 @@ C> Hartmann & Houston (2006). A poor default.
          rhow= facew(l,f,e,iu4)/phi
          rhoe= facew(l,f,e,iu5)/phi
          pl= facew(l,f,e,ipr) ! P- here
-         wbc(l,f,e,icpf)=facew(l,f,e,icpf)
-         wbc(l,f,e,icvf)=facew(l,f,e,icvf)
-         cp=facew(l,f,e,icpf)/rho
-         cv=facew(l,f,e,icvf)/rho
+         wbc(l,f,e,jcpf)=facew(l,f,e,jcpf)
+         wbc(l,f,e,jcvf)=facew(l,f,e,jcvf)
+         cp=facew(l,f,e,jcpf)/rho
+         cv=facew(l,f,e,jcvf)/rho
 c        fs = 0.0
          if(outflsub)then
             pres= pinfty
@@ -153,23 +161,23 @@ c        fs = 0.0
          call BcondOutflowPerf(idbc,pres,sxn,syn,szn,cp,molarmass,
      >                         rho,rhou,rhov,rhow,rhoe,pl,
      >                         rhob,rhoub,rhovb,rhowb,rhoeb )
-         wbc(l,f,e,irho)=rhob
-         wbc(l,f,e,iux)=rhoub/rhob
-         wbc(l,f,e,iuy)=rhovb/rhob
-         wbc(l,f,e,iuz)=rhowb/rhob
+         wbc(l,f,e,jrho)=rhob
+         wbc(l,f,e,jux)=rhoub/rhob
+         wbc(l,f,e,juy)=rhovb/rhob
+         wbc(l,f,e,juz)=rhowb/rhob
 ! dammit fix this. tdstate to the rescue?
-         wbc(l,f,e,ithm)=(rhoeb-0.5*(rhoub**2+rhovb**2+rhowb**2)/rhob)/
+         wbc(l,f,e,jthm)=(rhoeb-0.5*(rhoub**2+rhovb**2+rhowb**2)/rhob)/
      >                   cv
 ! dammit fix that
-         wbc(l,f,e,iu1)=rhob*phi
-         wbc(l,f,e,iu2)=rhoub*phi
-         wbc(l,f,e,iu3)=rhovb*phi
-         wbc(l,f,e,iu4)=rhowb*phi
-         wbc(l,f,e,iu5)=rhoeb*phi
-         wbc(l,f,e,iph)=phi
-         wbc(l,f,e,ipr)=pres
+         wbc(l,f,e,ju1)=rhob*phi
+         wbc(l,f,e,ju2)=rhoub*phi
+         wbc(l,f,e,ju3)=rhovb*phi
+         wbc(l,f,e,ju4)=rhowb*phi
+         wbc(l,f,e,ju5)=rhoeb*phi
+         wbc(l,f,e,jph)=phi
+         wbc(l,f,e,jpr)=pres
 ! dammit fix this. tdstate to the rescue?
-         wbc(l,f,e,isnd)=sqrt(cp/cv*pres/rho)
+         wbc(l,f,e,jsnd)=sqrt(cp/cv*pres/rho)
 ! dammit fix that
       enddo
       enddo

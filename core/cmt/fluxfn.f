@@ -256,7 +256,7 @@ C> @}
       include 'DG'
 
       real wminus(lx1*lz1*2*ldim*nelt,*)
-      real uplus(lx1*lz1*2*ldim*nelt,nstate)! really should be toteq, but I haven't changed iu1 yet
+      real uplus(lx1*lz1*2*ldim*nelt,nstate)! really should be toteq, but I haven't changed ju1 yet
       real flux(lx1*lz1*2*ldim*nelt,toteq) ! intent(inout); incremented
 
       parameter (lfq=lx1*lz1*2*ldim*lelt)
@@ -281,16 +281,16 @@ C> @}
 ! overwrite wminus(:,isnd) with max wave speed local to each GLL point.
 ! use uplus as scratch for awhile
       if (if3d) then
-         call vdot3(uplus,wminus(1,iux),wminus(1,iuy),wminus(1,iuz),
+         call vdot3(uplus,wminus(1,jux),wminus(1,juy),wminus(1,juz),
      >              nx,ny,nz,nf)
       else
-         call vdot2(uplus,wminus(1,iux),wminus(1,iuy),nx,ny,nf)
+         call vdot2(uplus,wminus(1,jux),wminus(1,juy),nx,ny,nf)
       endif
       do i=1,nf
-         wminus(i,isnd)=0.5*(abs(uplus(i,1))+wminus(i,isnd))
+         wminus(i,jsnd)=0.5*(abs(uplus(i,1))+wminus(i,jsnd))
       enddo
 ! get max
-      call fgslib_gs_op(dg_hndl,wminus(1,isnd),1,4,0)
+      call fgslib_gs_op(dg_hndl,wminus(1,jsnd),1,4,0)
 
 ! do BC twice? not sure.
       call copy(jscr,jface,nf)
@@ -298,12 +298,12 @@ C> @}
 
 ! now get flux from jump in the conserved variable one equation at a time
       do eq=1,toteq
-         call faceu(eq,wminus(1,iu5)) ! peel U once or twice (thrice)?
-         call face_state_commo(wminus(1,iu5),uplus,nf,1,dg_hndl)
-         call sub2(uplus,wminus(1,iu5),nf)
+         call faceu(eq,wminus(1,ju5)) ! peel U once or twice (thrice)?
+         call face_state_commo(wminus(1,ju5),uplus,nf,1,dg_hndl)
+         call sub2(uplus,wminus(1,ju5),nf)
 ! might math.f this someday
          do i=1,nf
-            flux(i,eq)=flux(i,eq)-wminus(i,isnd)*jscr(i)*uplus(i,1)
+            flux(i,eq)=flux(i,eq)-wminus(i,jsnd)*jscr(i)*uplus(i,1)
          enddo
       enddo
 
@@ -316,14 +316,15 @@ C> @}
 
       subroutine kennedygruber(flx,ul,ur,wl,wr,jal,jar)
       include 'SIZE' ! for ldim
+      include 'CMTDATA' ! for i* indices
       real flx(5)
       real ul(5),ur(5),wl(4),wr(4),jal(3),jar(3)
       real rav,uav(3),pav,eav,jav(3)
       real rl,rr,pl,pr,qav,rq
       rl=ul(1)
       rr=ur(1)
-      pl=wl(4)
-      pr=wr(4)
+      pl=wl(ipr)
+      pr=wr(ipr)
       call rzero(jav,3)
       call rzero(uav,3)
       do j=1,ldim
@@ -377,7 +378,7 @@ C> @}
       nf=nxz*nfaces*nelt
 
 ! I don't know what to do with volume fraction phi, and this is my first guess
-      call col3(jscr,jface,z(1,iph),nf) ! Jscr=JA*{{\phi_g}}
+      call col3(jscr,jface,z(1,jph),nf) ! Jscr=JA*{{\phi_g}}
 
 ! zero out jscr at boundary faces; gs_op is degenerate there.
       call bcmask_cmt(jscr)
@@ -394,10 +395,10 @@ C> @}
 !-----------------------------------------------------------------------
 
 ! mass. scrF={{rho}}{{u}}, scrG={{rho}}{{v}}, scrH={{rho}}{{w}}
-      call col3(scrf,z(1,irho),z(1,iux),nf)
-      call col3(scrg,z(1,irho),z(1,iuy),nf)
+      call col3(scrf,z(1,jrho),z(1,jux),nf)
+      call col3(scrg,z(1,jrho),z(1,juy),nf)
       if (if3d) then
-         call col3(scrh,z(1,irho),z(1,iuz),nf)
+         call col3(scrh,z(1,jrho),z(1,juz),nf)
          call vdot3(fdot,scrf,scrg,scrh,nx,ny,nz,nf)
       else
          call vdot2(fdot,scrf,scrg,nx,ny,nf)
@@ -405,41 +406,41 @@ C> @}
       call add2col2(flux(1,1),fdot,jscr,nf)
 
 ! x-momentum
-      call col3(fdot,scrf,z(1,iux),nf) ! F={{rho}}{{u}}{{u}}
-      call add2(fdot,z(1,ipr),nf) ! F+={{p}}
+      call col3(fdot,scrf,z(1,jux),nf) ! F={{rho}}{{u}}{{u}}
+      call add2(fdot,z(1,jpr),nf) ! F+={{p}}
       call col2(fdot,nx,nf) ! F contribution to f~
-      call addcol4(fdot,scrf,z(1,iuy),ny,nf) ! G={{rho}}{{v}}{{u}} .ny -> f~
-      if (if3d) call addcol4(fdot,scrf,z(1,iuz),nz,nf) ! H={{rho}}{{w}}{{u}} .nz -> f~
+      call addcol4(fdot,scrf,z(1,juy),ny,nf) ! G={{rho}}{{v}}{{u}} .ny -> f~
+      if (if3d) call addcol4(fdot,scrf,z(1,juz),nz,nf) ! H={{rho}}{{w}}{{u}} .nz -> f~
       call add2col2(flux(1,2),fdot,jscr,nf)
 
 ! y-momentum
-      call col3(fdot,scrg,z(1,iuy),nf) ! G={{rho}}{{v}}{{v}}
-      call add2(fdot,z(1,ipr),nf) ! G+={{p}}
+      call col3(fdot,scrg,z(1,juy),nf) ! G={{rho}}{{v}}{{v}}
+      call add2(fdot,z(1,jpr),nf) ! G+={{p}}
       call col2(fdot,ny,nf)
-      call addcol4(fdot,scrg,z(1,iux),nx,nf)
+      call addcol4(fdot,scrg,z(1,jux),nx,nf)
 
       if (if3d) then
-         call addcol4(fdot,scrg,z(1,iuz),nz,nf)
+         call addcol4(fdot,scrg,z(1,juz),nz,nf)
          call add2col2(flux(1,3),fdot,jscr,nf)
 ! z-momentum
-         call col3(fdot,scrh,z(1,iuz),nf)
-         call add2(fdot,z(1,ipr),nf)
+         call col3(fdot,scrh,z(1,juz),nf)
+         call add2(fdot,z(1,jpr),nf)
          call col2(fdot,nz,nf)
-         call addcol4(fdot,scrh,z(1,iux),nx,nf)
-         call addcol4(fdot,scrh,z(1,iuy),ny,nf)
+         call addcol4(fdot,scrh,z(1,jux),nx,nf)
+         call addcol4(fdot,scrh,z(1,juy),ny,nf)
          call add2col2(flux(1,4),fdot,jscr,nf)
       else ! 2D only. couldn't resist deleting one if(if3d)
          call add2col2(flux(1,3),fdot,jscr,nf)
       endif
 
 ! energy ({{rho}}{{E}}+{{p}}){{u}}.n
-      call col2(scrf,z(1,iu5),nf)
-      call col2(scrg,z(1,iu5),nf)
-      call add2col2(scrf,z(1,iux),z(1,ipr),nf)
-      call add2col2(scrg,z(1,iuy),z(1,ipr),nf)
+      call col2(scrf,z(1,ju5),nf)
+      call col2(scrg,z(1,ju5),nf)
+      call add2col2(scrf,z(1,jux),z(1,jpr),nf)
+      call add2col2(scrg,z(1,juy),z(1,jpr),nf)
       if (if3d) then
-         call col2(scrh,z(1,iu5),nf)
-         call add2(scrh,z(1,iuz),z(1,ipr),nf)
+         call col2(scrh,z(1,ju5),nf)
+         call add2(scrh,z(1,juz),z(1,jpr),nf)
          call vdot3(fdot,scrf,scrg,scrh,nx,ny,nz,nf)
       else
          call vdot2(fdot,scrf,scrg,nx,ny,nf)
@@ -460,12 +461,12 @@ C> @}
 ! Routine to convert primitive variables on face to parameter vector for
 ! entropy-stable numerical fluxes consistent with volume fluxes.
 ! converts U5=phi*rho*E on faces to E=e+1/2*ui*ui for Kennedy-Gruber fluxes
-! consider putting indices for quantities (iu5, irho, etc.) in the argument
+! consider putting indices for quantities (ju5, jrho, etc.) in the argument
 ! list instead of including CMTDATA
       include 'SIZE'
       include 'CMTDATA'
       real fatface(nf,ns)
-      call invcol2(fatface(1,iu5),fatface(1,irho),nf)
-      call invcol2(fatface(1,iu5),fatface(1,iph),nf)
+      call invcol2(fatface(1,ju5),fatface(1,jrho),nf)
+      call invcol2(fatface(1,ju5),fatface(1,jph),nf)
       return
       end
