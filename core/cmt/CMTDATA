@@ -96,11 +96,9 @@ c---------------------------------------------------------------------
      $                 ,t0in,p0in,asnd,rgas,cp,mu,lambda,molarmass
 ! let kond=udiff
 
-! index for gas density in vtrans, Q+-
-      integer irho
+! VTRANS indices
+      integer jrho,jcp,jcv
       parameter (jrho=1) ! better always be 1
-! other VTRANS indices
-      integer icp, icv
       parameter (jcp =2) ! rho*cp
       parameter (jcv =3) ! rho*cv
 ! indices in VDIFF
@@ -108,7 +106,7 @@ c---------------------------------------------------------------------
       parameter (jmu =1) ! viscosity
       parameter (jknd=2) ! thermal conductivity
       parameter (jlam=3) ! lambda, 2nd viscosity
-      parameter (jnus=4) ! nu_s, mass diffusion (EVM)
+      parameter (jnus=4) ! nu_s, mass diffusion (GP14 tensor)
 ! indices for fields in U
       integer irg, irpu, irpv, irpw, iret
       parameter (irg =1)     ! phi_g*rho_g
@@ -122,10 +120,11 @@ c---------------------------------------------------------------------
       parameter (jux =2)     ! u
       parameter (juy =3)     ! v
       parameter (juz =4)     ! w
+      parameter (jph =5)     ! phi_g
+      parameter (jrhof=???)
+      parameter (jsnd=5)     ! a
       parameter (jpr =5)     ! P
       parameter (jthm=6)     ! T
-      parameter (jsnd=7)     ! a
-      parameter (jph =8)     ! phi_g
       parameter (jcvf=9)     ! rho*cv
       parameter (jcpf=10)    ! rho*cp
       parameter (jmuf=11)    ! mu

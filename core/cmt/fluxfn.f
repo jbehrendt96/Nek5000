@@ -256,7 +256,8 @@ C> @}
       include 'DG'
 
       real wminus(lx1*lz1*2*ldim*nelt,*)
-      real uplus(lx1*lz1*2*ldim*nelt,nstate)! really should be toteq, but I haven't changed ju1 yet
+      real uplus(lx1*lz1*2*ldim*nelt) ! jumps are computed one at a time for now, so I only need
+                                      ! U+ for a single conserved variable
       real flux(lx1*lz1*2*ldim*nelt,toteq) ! intent(inout); incremented
 
       parameter (lfq=lx1*lz1*2*ldim*lelt)
@@ -289,7 +290,7 @@ C> @}
       do i=1,nf
          wminus(i,jsnd)=0.5*(abs(uplus(i,1))+wminus(i,jsnd))
       enddo
-! get max
+! get max wave speed
       call fgslib_gs_op(dg_hndl,wminus(1,jsnd),1,4,0)
 
 ! do BC twice? not sure.
@@ -351,6 +352,8 @@ C> @}
       subroutine kennedygruber_vec(z,flux,nstate,nflux) ! fsharp
 ! JH111218 Kennedy-Gruber fluxes, but acting on vectors of face nodes
 !  instead of two arbitrary points. Gratuitously assuming watertight geometry.
+! JH122518 Ask Paul if multiplication of elements of z is faster via gs_op
+!          given that z+=z-={{stuff}}
       include 'SIZE'
       include 'INPUT' ! for if3d
       include 'GEOM' ! for normal vectors at faces
