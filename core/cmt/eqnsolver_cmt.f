@@ -593,14 +593,14 @@ C> @}
       include  'INPUT'
 
       parameter (ldd=lx1*ly1*lz1)
-      common /ctmp1/ ju1(ldd),ju2(ldd)!,ur(ldd),us(ldd),ud(ldd),tu(ldd)
-      real ju1,ju2
+      common /ctmp1/ ju(ldd),jv(ldd)!,ur(ldd),us(ldd),ud(ldd),tu(ldd)
+      real ju,jv
       integer  e,eq
 
       n=lx1*ly1*lz1
 
-      call copy(ju1,phig(1,1,1,e),n)
-      call copy(ju2,pr(1,1,1,e),n)
+      call copy(ju,phig(1,1,1,e),n)
+      call copy(jv,pr(1,1,1,e),n)
       do j=1,ldim
          call copy(convh(1,j,1),u(1,1,1,j+1,e),n)
       enddo
@@ -613,12 +613,12 @@ C> @}
          call col2(convh(1,1,eq),vx(1,1,1,e),n)
          call col2(convh(1,2,eq),vy(1,1,1,e),n)
          if (if3d) call col2(convh(1,3,eq),vz(1,1,1,e),n)
-         call add2col2(convh(1,eq-1,eq),ju1,ju2,n)
+         call add2col2(convh(1,eq-1,eq),ju,jv,n)
       enddo
 
       eq=toteq
       call copy(convh(1,1,eq),u(1,1,1,eq,e),n)
-      call add2col2(convh(1,1,eq),ju1,ju2,n)
+      call add2col2(convh(1,1,eq),ju,jv,n)
       do j=2,ldim
          call copy(convh(1,j,eq),convh(1,1,eq),n)
       enddo

@@ -46,7 +46,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
 ! just multipy by {{phi}}
 ! until we can verify correct multiphase two-point fluxes
-!     call faceu(1,fatface(iwm+nfq*(jrhoff-1)))
+!     call faceu(1,fatface(iwm+nfq*(jrhof-1)))
       call fillq(jux, vx,    fatface(iwm),fatface(iwp))
       call fillq(juy, vy,    fatface(iwm),fatface(iwp))
       call fillq(juz, vz,    fatface(iwm),fatface(iwp))
@@ -56,7 +56,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       call fillq(jsnd,csound,fatface(iwm),fatface(iwp))
       call fstab(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
 
-! need total energy, not internal
+! need total energy, not internal. can this be folded into parameter_vector?
       i_cvars=(ju5-1)*nfq+1
 !     call faceu(toteq,fatface(i_cvars)) ! should persist from llf_euler
       call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)

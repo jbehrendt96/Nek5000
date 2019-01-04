@@ -255,8 +255,8 @@ C> @}
       include 'CMTDATA'
       include 'DG'
 
-      real wminus(lx1*lz1*2*ldim*nelt,*)
-      real uplus(lx1*lz1*2*ldim*nelt) ! jumps are computed one at a time for now, so I only need
+      real wminus(lx1*lz1*2*ldim*nelt,nstate)!*)
+      real uplus(lx1*lz1*2*ldim*nelt,1) ! jumps are computed one at a time for now, so I only need
                                       ! U+ for a single conserved variable
       real flux(lx1*lz1*2*ldim*nelt,toteq) ! intent(inout); incremented
 
@@ -398,10 +398,10 @@ C> @}
 !-----------------------------------------------------------------------
 
 ! mass. scrF={{rho}}{{u}}, scrG={{rho}}{{v}}, scrH={{rho}}{{w}}
-      call col3(scrf,z(1,jrho),z(1,jux),nf)
-      call col3(scrg,z(1,jrho),z(1,juy),nf)
+      call col3(scrf,z(1,jrhof),z(1,jux),nf)
+      call col3(scrg,z(1,jrhof),z(1,juy),nf)
       if (if3d) then
-         call col3(scrh,z(1,jrho),z(1,juz),nf)
+         call col3(scrh,z(1,jrhof),z(1,juz),nf)
          call vdot3(fdot,scrf,scrg,scrh,nx,ny,nz,nf)
       else
          call vdot2(fdot,scrf,scrg,nx,ny,nf)
@@ -469,7 +469,7 @@ C> @}
       include 'SIZE'
       include 'CMTDATA'
       real fatface(nf,ns)
-      call invcol2(fatface(1,ju5),fatface(1,jrho),nf)
+      call invcol2(fatface(1,ju5),fatface(1,jrhof),nf)
       call invcol2(fatface(1,ju5),fatface(1,jph),nf)
       return
       end
