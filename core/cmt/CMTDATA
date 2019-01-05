@@ -99,8 +99,9 @@ c---------------------------------------------------------------------
 ! VTRANS indices
       integer jrho,jcp,jcv
       parameter (jrho=1) ! better always be 1
-      parameter (jcp =2) ! rho*cp
-      parameter (jcv =3) ! rho*cv
+      parameter (jen =2) ! internal energy
+      parameter (jcp =3) ! rho*cp ! Really only need one of these, not both
+      parameter (jcv =4) ! rho*cv ! Really only need one of these, not both
 ! indices in VDIFF
       integer imu, iknd, ilam, inus
       parameter (jmu =1) ! viscosity

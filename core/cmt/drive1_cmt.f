@@ -43,7 +43,7 @@ c     Solve the Euler equations
          call compute_grid_h(gridh,xm1,ym1,zm1)
          call compute_primitive_vars ! get good mu
          if (1==2) call entropy_viscosity      ! for high diffno
-         call compute_transport_props! at t=0
+         if (1==2) call compute_transport_props! at t=0
 
       endif
 
@@ -108,7 +108,7 @@ C> Store it in res1
 
       integer lfq,heresize,hdsize
       parameter (lfq=lx1*lz1*2*ldim*lelt,
-     >                   heresize=nqq*3*lfq,! guarantees transpose of Q+ fits
+     >                   heresize=(nqq+1+toteq)*lfq,
      >                   hdsize=toteq*3*lfq) ! might not need ldim
 ! not sure if viscous surface fluxes can live here yet
       common /CMTSURFLX/ flux(heresize),graduf(hdsize)
@@ -145,7 +145,7 @@ C> Store it in res1
 
       if (1.eq.2) call entropy_viscosity ! accessed through uservp. computes
                              ! entropy residual and max wave speed
-      call compute_transport_props ! everything inside rk stage
+      if (1.eq.2) call compute_transport_props ! everything inside rk stage
 !     call smoothing(vdiff(1,1,1,1,imu)) ! still done in usr file
 ! you have GOT to figure out where phig goes!!!!
 
@@ -173,7 +173,8 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       nfq=lx1*lz1*2*ldim*nelt
       iwm =1
       iwp =iwm+nstate*nfq
-      iflx=iwp+nstate*nfq
+      iflx=iwp+nfq ! ok this needs to be segregated and CMTSURFLX redeclared.
+                   ! W+ depends on flux function and may not always be 1
       do eq=1,toteq
          ieq=(eq-1)*ndg_face+iflx
          call surface_integral_full(res1(1,1,1,1,eq),flux(ieq))

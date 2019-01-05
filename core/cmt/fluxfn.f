@@ -279,7 +279,7 @@ C> @}
          enddo
       enddo
 
-! overwrite wminus(:,isnd) with max wave speed local to each GLL point.
+! overwrite wminus(:,jsnd) with max wave speed local to each GLL point.
 ! use uplus as scratch for awhile
       if (if3d) then
          call vdot3(uplus,wminus(1,jux),wminus(1,juy),wminus(1,juz),

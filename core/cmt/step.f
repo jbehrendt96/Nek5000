@@ -38,9 +38,9 @@ C> @file step.f time stepping and mesh spacing routines
       if (ctarg .gt.0.0) then
          call compute_cfl (umax,utmp,vtmp,wtmp,1.0)
          dt_cfl=ctarg/umax
-         call glsqinvcolmin(dt1,vdiff(1,1,1,1,imu ),gridh,ntot,ctarg)
-         call glsqinvcolmin(dt2,vdiff(1,1,1,1,iknd),gridh,ntot,ctarg)
-         call glsqinvcolmin(dt3,vdiff(1,1,1,1,inus),gridh,ntot,ctarg)
+         call glsqinvcolmin(dt1,vdiff(1,1,1,1,jmu ),gridh,ntot,ctarg)
+         call glsqinvcolmin(dt2,vdiff(1,1,1,1,jknd),gridh,ntot,ctarg)
+         call glsqinvcolmin(dt3,vdiff(1,1,1,1,jnus),gridh,ntot,ctarg)
          dt_cmt=min(dt_cfl,dt1,dt2,dt3)
          if (dt_cmt .gt. 10.0) then
             if (nio.eq.0) write(6,*) 'dt huge. crashing ',istep,stage,
@@ -72,9 +72,9 @@ C> @file step.f time stepping and mesh spacing routines
 ! diffusion number based on viscosity.
 
 !     call mindr(mdr,diffno2)
-      call glinvcol2max(diffno1,vdiff(1,1,1,1,imu), gridh,ntot,dt_cmt)
-      call glinvcol2max(diffno2,vdiff(1,1,1,1,iknd),gridh,ntot,dt_cmt)
-      call glinvcol2max(diffno3,vdiff(1,1,1,1,inus),gridh,ntot,dt_cmt)
+      call glinvcol2max(diffno1,vdiff(1,1,1,1,jmu), gridh,ntot,dt_cmt)
+      call glinvcol2max(diffno2,vdiff(1,1,1,1,jknd),gridh,ntot,dt_cmt)
+      call glinvcol2max(diffno3,vdiff(1,1,1,1,jnus),gridh,ntot,dt_cmt)
 !     diffno=max(diffno1,diffno2,diffno3)
       time_cmt=time_cmt+dt_cmt
       if (nio.eq.0) WRITE(6,100)ISTEP,TIME_CMT,DT_CMT,COURNO,
@@ -131,7 +131,7 @@ c
             dr1 = dist2(x0,y0,x4,y4)
             if(dr1.lt.mdr) mdr=dr1
             if(dr1.lt.dtmp) dtmp=dr1
-            diffno=max(diffno,dt*vdiff(ix,iy,1,e,imu)/dtmp/dtmp)
+            diffno=max(diffno,dt*vdiff(ix,iy,1,e,jmu)/dtmp/dtmp)
           enddo
           enddo
         enddo
