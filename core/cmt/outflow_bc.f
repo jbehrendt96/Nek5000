@@ -76,7 +76,7 @@ C> Hartmann & Houston (2006). A poor default.
             wp(ithm,l) = temp   ! userbc should have set this to T(pinfty,rho-)
 !           up(5,l)=wm(jrho,l)*e_internal ! userbc plz set e_internal(temp)
             up(5,l)=e_internal ! here AND ONLY HERE is e_internal density-weighted
-     >          +0.5*wm(irho,l)*(wm(iux,l)**2+wm(iuy,l)**2+wm(iux,l)**2)
+     >          +0.5*wm(irho,l)*(wm(iux,l)**2+wm(iuy,l)**2+wm(iuz,l)**2)
             up(5,l)=up(5,l)*wm(iph,l)
 
          else ! supersonic outflow
@@ -87,8 +87,6 @@ C> Hartmann & Houston (2006). A poor default.
             up(5,l)=um(5,l)
 
          endif
-
-         call copy(up(1,l),um(1,l),4)
 
       enddo
       enddo
