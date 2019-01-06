@@ -39,7 +39,7 @@ C> @file wall_bc.f Dirichlet states for wall boundary conditions
          l=l+1
 
 ! bring this outside of the face point loop you moron
-         if (abs(vdiff(ix,iy,iz,e,ilam)) .gt. tol) then ! physical not artvisc
+         if (abs(vdiff(ix,iy,iz,e,jlam)) .gt. tol) then ! physical not artvisc
 
             wbc(l,f,e,jux)=ux
             wbc(l,f,e,juy)=uy
@@ -98,14 +98,6 @@ C> @file wall_bc.f Dirichlet states for wall boundary conditions
 ! JH102016
 ! rind state for inviscid fluxes is different from viscous fluxes
       call reflect_rind(f,e,wminus,wplus,uminus,uplus,nvar)
-! diagnostic
-      do i=1,lxz
-         write(67,'(a6,2i4,10e15.7)')'f,e,w-',f,e,(wminus(j,i),j=1,nvar)
-         write(68,'(a6,2i4,10e15.7)')'f,e,w+',f,e,(wplus(j,i),j=1,nvar)
-         write(69,'(a6,2i4,5e15.7)')'f,e,u-',f,e,(uminus(j,i),j=1,toteq)
-         write(70,'(a6,2i4,5e15.7)')'f,e,u+',f,e,(uplus(j,i),j=1,toteq)
-      enddo
-! diagnostic
 
       return
       end

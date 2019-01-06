@@ -79,7 +79,7 @@ c compute_rhs_dt for the 5 conserved variables
       enddo
 
       call compute_primitive_vars ! for next time step? Not sure anymore
-      call copy(t(1,1,1,1,2),vtrans(1,1,1,1,irho),nxyz1*nelt)
+      call copy(t(1,1,1,1,2),vtrans(1,1,1,1,jrho),nxyz1*nelt)
       ftime = ftime + dnekclock() - ftime_dum
 
       if (mod(istep,iostep).eq.0.or.istep.eq.1)then
@@ -263,8 +263,7 @@ C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}\nabla \mathbf{U}\}\} \cdot \left[v\righ
       enddo
 
       dumchars='end_of_rhs'
-      call dumpresidue(dumchars,999)
-      call exitt
+!     call dumpresidue(dumchars,999)
 
       return
       end

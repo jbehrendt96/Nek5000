@@ -9,14 +9,6 @@ C> wrapper for other BC routines. Just one for now. More to come.
      >     uminus(toteq,lx1*lz1),uplus(toteq,lx1*lz1)
 
       call outflow_df(f,e,wminus,wplus,uminus,uplus,nvar)
-! diagnostic
-      do i=1,lxz
-         write(57,'(a6,2i4,10e15.7)')'f,e,w-',f,e,(wminus(j,i),j=1,nvar)
-         write(58,'(a6,2i4,10e15.7)')'f,e,w+',f,e,(wplus(j,i),j=1,nvar)
-         write(59,'(a6,2i4,5e15.7)')'f,e,u-',f,e,(uminus(j,i),j=1,toteq)
-         write(60,'(a6,2i4,5e15.7)')'f,e,u+',f,e,(uplus(j,i),j=1,toteq)
-      enddo
-! diagnostic
 
       return
       end

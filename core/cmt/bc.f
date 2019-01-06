@@ -30,9 +30,7 @@ C> Determining rind state for Dirichlet boundary conditions
 
       common /nekcb/ cb
       character*3 cb
-      parameter(lstate=5) ! KG is expecting 4.
-                                      ! hopefully, this won't cause problems
-      COMMON /SCRNS/ wminus(lstate,lxz),wplus(lstate,lxz),
+      COMMON /SCRNS/ wminus(nparm,lxz),wplus(nparm,lxz),
      >               jaminus(3,lxz),japlus(3,lxz),
      >               uminus(toteq,lxz),uplus(toteq,lxz),
      >               flx(toteq,lxz)
@@ -57,11 +55,11 @@ C> Determining rind state for Dirichlet boundary conditions
 ! facind + userbc for wminus, uminus
 ! dirichlet routines for wplus, uplus
             if (cb.eq.'v  ' .or. cb .eq. 'V  ') then
-              call inflow(f,e,wminus,wplus,uminus,uplus,lstate)
+              call inflow(f,e,wminus,wplus,uminus,uplus,nparm)
             elseif (cb.eq.'O  ') then
-              call outflow(f,e,wminus,wplus,uminus,uplus,lstate)
+              call outflow(f,e,wminus,wplus,uminus,uplus,nparm)
             elseif (cb .eq. 'W  ' .or. cb .eq.'I  '.or.cb .eq.'SYM')then
-              call wallbc_inviscid(f,e,wminus,wplus,uminus,uplus,lstate)
+              call wallbc_inviscid(f,e,wminus,wplus,uminus,uplus,nparm)
             endif 
 
 ! convert surface normals into metric terms for two-point fluxes (just
@@ -85,7 +83,7 @@ C> Determining rind state for Dirichlet boundary conditions
 
 ! two-point flux
             call sequential_flux(flx,wminus,wplus,uminus,uplus,jaminus,
-     >                           japlus,kennedygruber,lstate,nxz)
+     >                           japlus,kennedygruber,nparm,nxz)
             do eq=1,toteq
             do i=1,nxz
             flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
@@ -93,7 +91,7 @@ C> Determining rind state for Dirichlet boundary conditions
             enddo
 ! stabilization flux
             call sequential_flux(flx,wminus,wplus,uminus,uplus,jaminus,
-     >                           japlus,llf_euler,lstate,nxz)
+     >                           japlus,llf_euler,nparm,nxz)
             do eq=1,toteq
             do i=1,nxz
             flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
