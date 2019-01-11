@@ -349,6 +349,49 @@ C> @}
       return
       end
 
+      subroutine kepec_ch(flx,ul,ur,wl,wr,jal,jar)
+! kinetic energy preserving entropy-conservative flux a la Chandrashekar
+! straight from his 2013 paper (well, GWK16 equation 3.19-20),
+! no playing around with pressure
+      include 'SIZE' ! for ldim
+      include 'CMTDATA' ! for i* indices
+      external logmean
+      real logmean
+      real flx(5)
+      real ul(5),ur(5),wl(4),wr(4),jal(3),jar(3)
+      real rav,uav(3),pav,hhat,jav(3)
+      real rl,rr,pl,pr,qav,rq
+      rl=ul(1) !lol need phi
+      rr=ur(1)
+      pl=wl(ipr)
+      pr=wr(ipr)
+      bl=0.5*rl/pl
+      br=0.5*rr/pr
+      call rzero(jav,3)
+      call rzero(uav,3)
+      do j=1,ldim
+         jav(j)=0.5*(jal(j)+jar(j))
+         uav(j)=0.5*( wl(j)+ wr(j))
+      enddo
+      rav=0.5*(rl +rr ) !temporary
+      bav=0.5*(bl+br) !temporary
+      phat=0.5*rav/bav
+      rav=logmean(rl,rr)
+      bav=logmean(bl,br)
+      hhat=0.5/
+      qav=0.0
+      do j=1,ldim
+         qav=qav+uav(j)*jav(j) ! {{u}}.{{Ja}}
+      enddo
+      rq=rav*qav
+      flx(1)=rq
+      flx(2)=rq*uav(1)+jav(1)*phat
+      flx(3)=rq*uav(2)+jav(2)*phat
+      flx(4)=rq*uav(3)+jav(3)*phat
+      flx(5)=rq*hhat+phat*qav ! ({{rho}}{{E}}+{{p}}){{u}}
+      return
+      end
+
       subroutine kennedygruber_vec(z,flux,nstate,nflux) ! fsharp
 ! JH111218 Kennedy-Gruber fluxes, but acting on vectors of face nodes
 !  instead of two arbitrary points. Gratuitously assuming watertight geometry.

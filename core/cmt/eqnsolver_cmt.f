@@ -180,6 +180,10 @@ C> Convective volume terms formed and differentiated^T here
       include 'CMTDATA'
       include 'GEOM'
       integer e,eq
+! JH011119 We need a "sequential" version of an
+!          external parameter_vector routine use use for vectorized
+!          flux functions. There's a case to be made for the hierarchy
+!          of vars -> parm -> flux function, and may even be faster
       external kennedygruber
 
       n=3*lx1*ly1*lz1*toteq
@@ -211,17 +215,17 @@ C> @}
       real ja(lx1,ly1,lz1,ldim,ldim)   ! rst outermost
 ! scratch element for extra variables (hardcoded) and conserved variables U
 ! transposed to quantity-innermost. unvectorizable?
-      common /scrns/ waux (nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
-     >               wauxt(lx1*ly1*lz1,nparm),jat(3,3,lx1,ly1,lz1)
-      real waux,ut,wauxt,jat
+      common /scrns/ zaux (nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
+     >               zauxt(lx1*ly1*lz1,nparm),jat(3,3,lx1,ly1,lz1)
+      real zaux,ut,zauxt,jat
       real flx(5)
 
       nxyz=lx1*ly1*lz1
-      call copy(wauxt(1,iux),vx(1,1,1,e),nxyz)
-      call copy(wauxt(1,iuy),vy(1,1,1,e),nxyz)
-      call copy(wauxt(1,iuz),vz(1,1,1,e),nxyz)
-      call copy(wauxt(1,ipr),pr(1,1,1,e),nxyz)
-      call transpose(waux,nparm,wauxt,nxyz)
+      call copy(zauxt(1,iux),vx(1,1,1,e),nxyz)
+      call copy(zauxt(1,iuy),vy(1,1,1,e),nxyz)
+      call copy(zauxt(1,iuz),vz(1,1,1,e),nxyz)
+      call copy(zauxt(1,ipr),pr(1,1,1,e),nxyz)
+      call transpose(zaux,nparm,zauxt,nxyz)
       call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
 
       call rzero(jat,9*lx1*ly1*lz1)
@@ -243,7 +247,7 @@ C> @}
 ! r-direction
          do l=1,lx1
             call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
-     >                         waux(1,ix,iy,iz),waux(1,l,iy,iz),
+     >                         zaux(1,ix,iy,iz),zaux(1,l,iy,iz),
      >                         jat(1,1,ix,iy,iz),jat(1,1,l,iy,iz))
             do eq=1,toteq
                res(ix,iy,iz,e,eq)=res(ix,iy,iz,e,eq)+
@@ -253,7 +257,7 @@ C> @}
 ! s-direction
          do l=1,ly1
             call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
-     >                         waux(1,ix,iy,iz),waux(1,ix,l,iz),
+     >                         zaux(1,ix,iy,iz),zaux(1,ix,l,iz),
      >                         jat(1,2,ix,iy,iz),jat(1,2,ix,l,iz))
             do eq=1,toteq
                res(ix,iy,iz,e,eq)=res(ix,iy,iz,e,eq)+
@@ -271,7 +275,7 @@ C> @}
 ! t-direction
          do l=1,lz1
             call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
-     >                         waux(1,ix,iy,iz),waux(1,ix,iy,l),
+     >                         zaux(1,ix,iy,iz),zaux(1,ix,iy,l),
      >                         jat(1,3,ix,iy,iz),jat(1,3,ix,iy,l))
             do eq=1,toteq
                res(ix,iy,iz,e,eq)=res(ix,iy,iz,e,eq)+
@@ -305,18 +309,18 @@ C> @}
       real fcons(lx1,ly1,lz1,3,toteq)   ! consistent ``1-point'' flux
 ! scratch element for extra variables (hardcoded) and conserved variables U
 ! transposed to quantity-innermost. unvectorizable?
-      common /scrns/ waux (nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
-     >               wauxt(lx1*ly1*lz1,nparm),jat(3,3,lx1,ly1,lz1)
+      common /scrns/ zaux (nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
+     >               zauxt(lx1*ly1*lz1,nparm),jat(3,3,lx1,ly1,lz1)
      >              ,rhsscr(lx1,toteq)
-      real waux,ut,wauxt,jat,rhsscr
+      real zaux,ut,zauxt,jat,rhsscr
       real flx(5)
 
       nxyz=lx1*ly1*lz1
-      call copy(wauxt(1,iux),vx(1,1,1,e),nxyz)
-      call copy(wauxt(1,iuy),vy(1,1,1,e),nxyz)
-      call copy(wauxt(1,iuz),vz(1,1,1,e),nxyz)
-      call copy(wauxt(1,ipr),pr(1,1,1,e),nxyz)
-      call transpose(waux,nparm,wauxt,nxyz)
+      call copy(zauxt(1,iux),vx(1,1,1,e),nxyz)
+      call copy(zauxt(1,iuy),vy(1,1,1,e),nxyz)
+      call copy(zauxt(1,iuz),vz(1,1,1,e),nxyz)
+      call copy(zauxt(1,ipr),pr(1,1,1,e),nxyz)
+      call transpose(zaux,nparm,zauxt,nxyz)
       call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
 
       call rzero(jat,9*lx1*ly1*lz1)
@@ -339,7 +343,7 @@ C> @}
          do ix=1,lx1
             do l=ix+1,lx1
                call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
-     >                            waux(1,ix,iy,iz),waux(1,l,iy,iz),
+     >                            zaux(1,ix,iy,iz),zaux(1,l,iy,iz),
      >                            jat(1,1,ix,iy,iz),jat(1,1,l,iy,iz))
                do eq=1,toteq
                   rhsscr(ix,eq)=rhsscr(ix,eq)+dstrong(ix,l)*flx(eq)
@@ -358,10 +362,10 @@ C> @}
       enddo ! iz
 
 
-! consider repacking ut and waux with iy in second place
+! consider repacking ut and zaux with iy in second place
 ! diagnostic kg is consistent in r and s
 !            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,iz),
-!     >                            waux(1,ix,iy,iz),waux(1,ix,iy,iz),
+!     >                            zaux(1,ix,iy,iz),zaux(1,ix,iy,iz),
 !     >                            jat(1,2,ix,iy,iz),jat(1,2,ix,iy,iz))
 !               write(60+eq,'(5e15.7)')
 !     >xm1(ix,iy,iz,e),ym1(ix,iy,iz,e),flx(eq),fcons(ix,iy,iz,2,eq),
@@ -374,7 +378,7 @@ C> @}
          do iy=1,ly1
             do l=iy+1,ly1
                call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
-     >                            waux(1,ix,iy,iz),waux(1,ix,l,iz),
+     >                            zaux(1,ix,iy,iz),zaux(1,ix,l,iz),
      >                            jat(1,2,ix,iy,iz),jat(1,2,ix,l,iz))
                do eq=1,toteq
                   rhsscr(iy,eq)=rhsscr(iy,eq)+dstrong(iy,l)*flx(eq)
@@ -397,7 +401,7 @@ C> @}
 
       if (lz1.gt.1) then
       write(6,*) 'duh sir t-direction'
-! consider repacking ut and waux with iz in second place
+! consider repacking ut and zaux with iz in second place
 ! t-direction
       do iy=1,ly1
       do ix=1,lx1
@@ -405,7 +409,7 @@ C> @}
          do iz=1,lz1
             do l=iz+1,lz1
                call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
-     >                            waux(1,ix,iy,iz),waux(1,ix,iy,l),
+     >                            zaux(1,ix,iy,iz),zaux(1,ix,iy,l),
      >                            jat(1,3,ix,iy,iz),jat(1,3,ix,iy,l))
                do eq=1,toteq
                   rhsscr(iz,eq)=rhsscr(iz,eq)+dstrong(iz,l)*flx(eq)
@@ -453,18 +457,22 @@ C> @}
       real fcons(lx1,ly1,lz1,3,toteq)   ! consistent ``1-point'' flux
 ! scratch element for extra variables (hardcoded) and conserved variables U
 ! transposed to quantity-innermost. unvectorizable?
-      common /scrns/ waux (nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
-     >               wauxt(lx1*ly1*lz1,nparm),jat(3,3,lx1,ly1,lz1)
+      common /scrns/ zaux (nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
+     >               zauxt(lx1*ly1*lz1,nparm),jat(3,3,lx1,ly1,lz1)
      >              ,rhsscr(lx1,toteq)
-      real waux,ut,wauxt,jat,rhsscr
+      real zaux,ut,zauxt,jat,rhsscr
       real flx(5)
 
       nxyz=lx1*ly1*lz1
-      call copy(wauxt(1,iux),vx(1,1,1,e),nxyz)
-      call copy(wauxt(1,iuy),vy(1,1,1,e),nxyz)
-      call copy(wauxt(1,iuz),vz(1,1,1,e),nxyz)
-      call copy(wauxt(1,ipr),pr(1,1,1,e),nxyz)
-      call transpose(waux,nparm,wauxt,nxyz)
+! JH011119 We need to factor this into a "sequential" version of an
+!          external parameter_vector routine use use for vectorized
+!          flux functions. There's a case to be made for the hierarchy
+!          of vars -> parm -> flux function, and may even be faster
+      call copy(zauxt(1,iux),vx(1,1,1,e),nxyz)
+      call copy(zauxt(1,iuy),vy(1,1,1,e),nxyz)
+      call copy(zauxt(1,iuz),vz(1,1,1,e),nxyz)
+      call copy(zauxt(1,ipr),pr(1,1,1,e),nxyz)
+      call transpose(zaux,nparm,zauxt,nxyz)
       call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
 
       call rzero(jat,9*lx1*ly1*lz1)
@@ -486,7 +494,7 @@ C> @}
 ! r-direction
          do l=ix+1,lx1
             call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
-     >                            waux(1,ix,iy,iz),waux(1,l,iy,iz),
+     >                            zaux(1,ix,iy,iz),zaux(1,l,iy,iz),
      >                            jat(1,1,ix,iy,iz),jat(1,1,l,iy,iz))
             do eq=1,toteq
             res(ix,iy,iz,e,eq)=res(ix,iy,iz,e,eq)+dstrong(ix,l)*flx(eq)
@@ -502,7 +510,7 @@ C> @}
 ! s-direction
          do l=iy+1,ly1
             call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
-     >                            waux(1,ix,iy,iz),waux(1,ix,l,iz),
+     >                            zaux(1,ix,iy,iz),zaux(1,ix,l,iz),
      >                            jat(1,2,ix,iy,iz),jat(1,2,ix,l,iz))
             do eq=1,toteq
             res(ix,iy,iz,e,eq)=res(ix,iy,iz,e,eq)+dstrong(iy,l)*flx(eq)
@@ -517,7 +525,7 @@ C> @}
 ! t-direction
          do l=iz+1,lz1
             call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
-     >                            waux(1,ix,iy,iz),waux(1,ix,iy,l),
+     >                            zaux(1,ix,iy,iz),zaux(1,ix,iy,l),
      >                            jat(1,3,ix,iy,iz),jat(1,3,ix,iy,l))
             do eq=1,toteq
             res(ix,iy,iz,e,eq)=res(ix,iy,iz,e,eq)+dstrong(iz,l)*flx(eq)
