@@ -20,8 +20,9 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
       integer lfq,heresize,hdsize
       parameter (lfq=lx1*lz1*2*ldim*lelt,
-     >                   heresize=(nqq+1+toteq)*lfq,
+     >                   heresize=(nqq+3+toteq)*lfq, ! Chandrashekar
      >                   hdsize=toteq*3*lfq) ! might not need ldim
+!    >                   heresize=(nqq+1+toteq)*lfq, ! split forms like Kennedy & Gruber
 ! JH070214 OK getting different answers whether or not the variables are
 !          declared locally or in common blocks. switching to a different
 !          method of memory management that is more transparent to me.
@@ -36,13 +37,18 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 ! where different things live
       iwm =1
       iwp =iwm+nstate*nfq
-      iflx=iwp+nfq ! only duplicate one quantity at a time,
+! Kennedy & Gruber (2008)
+!     iflx=iwp+nfq ! only duplicate one quantity at a time,
                    ! so offset iflx only one field from iwp
+! Chandrashekar (2013)
+      iflx=iwp+3*nfq ! storage for duplicates and {{rho}}[[ui]]
+                     ! so offset iflx three field from iwp
 
       call rzero(fatface(iflx),nfq*toteq)
 
 ! fill parameter vector z for two-point flux applied at faces
 ! start with primitive variables at faces
+! This should probably be folded into the argument routines
 
 ! just multipy by {{phi}}
 ! until we can verify correct multiphase two-point fluxes
@@ -50,23 +56,25 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       call fillq(jux, vx,    fatface(iwm),fatface(iwp))
       call fillq(juy, vy,    fatface(iwm),fatface(iwp))
       call fillq(juz, vz,    fatface(iwm),fatface(iwp))
+      call fillq(jpr, pr,    fatface(iwm),fatface(iwp)) ! test KG w/like this
       call fillq(jph, phig,  fatface(iwm),fatface(iwp))
 
 ! stabilization first.
       call fillq(jsnd,csound,fatface(iwm),fatface(iwp))
       call fstab(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
 
-! need total energy, not internal. can this be folded into parameter_vector?
+! need total energy, not internal. this must be folded into parameter_vector!
       i_cvars=(ju5-1)*nfq+1
 !     call faceu(toteq,fatface(i_cvars)) ! should persist from llf_euler
       call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
 
-      call fillq(jrhof,vtrans,fatface(iwm),fatface(iwp))
-      call fillq(jpr, pr,    fatface(iwm),fatface(iwp))
-
+! ONLY needed by Kennedy-Gruber (2008) as written. This is done in fstab
+! for Chandrashekar (2013), but overwrites jsnd for KG and friends.
+!     call fillq(jrhof,vtrans,fatface(iwm),fatface(iwp))
 ! q- -> z-. Kennedy-Gruber, Pirozzoli, and most energy-
 !           conserving fluxes have z=q, so I just divide total energy by
 !           U1 here since Kennedy-Gruber needs E
+
       call parameter_vector(fatface(iwm),nfq,nstate)
 
 ! z- -> z^, which is {{z}} for Kennedy-Gruber, Pirozzoli, and some parts
@@ -174,6 +182,31 @@ C> @}
 !                                                1 ==> +
       call fgslib_gs_op_fields(handle,yours,nf,nstate,1,1,0)
       call sub2 (yours,mine,ntot)
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine avg_and_jump(avg,jump,scratch,nf,nstate,handle)
+
+! JH011419 Get the most out of every gs_op. pile of faces of U in avg
+!          gets overwritten by {{U}}. jump gets [[U]].
+
+      integer handle,nf,nstate ! intent(in)
+      real avg(*) !, intent(inout) ! U- on input, {{U}} on output
+      real jump(*),scratch(*) !, intent(out) ! jump becomes [[U]]
+
+      ntot=nf*nstate
+      call copy(scratch,avg,ntot)
+!-----------------------------------------------------------------------
+! operation flag is second-to-last arg, an integer
+!                                                1 ==> +
+      call fgslib_gs_op_fields(handle,scratch,nf,nstate,1,1,0)
+      call copy(jump,scratch,ntot) ! jump = U- + U+
+      const=-2.0
+      call add2s2(jump,avg,const,ntot) ! jump = (U- + U+) - 2*U- = U+-U-
+      call cmult(scratch,0.5,ntot)
+      call copy(avg,scratch,ntot) ! avg={{scratch}}
       return
       end
 

@@ -60,3 +60,21 @@ c     gmaref     = param(105)
       return
       end
 c------------------------------------------------------------------------
+
+      function logmean(l,r)
+! computes (l-r)/(log(l)-log(r)) cleanly when l -> r
+! Appendix B, Ismail & Roe (2009)
+      real logmean
+      real l,r
+      real f,u,zeta
+      parameter (eps=0.02)
+      zeta=l/r
+      f=(zeta-1.0)/(zeta+1.0)
+      u=f**2
+      if (u.lt.eps) then
+         f=1.0+u/3.0+0.2*u**2+u**3/7.0
+      else
+         f=0.5*log(zeta)/f
+      endif
+      logmean=0.5*(l+r)/f
+      end

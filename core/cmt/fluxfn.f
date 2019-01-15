@@ -310,6 +310,7 @@ C> @}
 
       return
       end
+
 !-----------------------------------------------------------------------
 ! JH060618 Hooray for two-point fluxes! Needed for entropy-conserving DGSEM
 !          in CMT-nek. These are volume functions here. calls to GS for
@@ -354,7 +355,7 @@ C> @}
 ! straight from his 2013 paper (well, GWK16 equation 3.19-20),
 ! no playing around with pressure
       include 'SIZE' ! for ldim
-      include 'CMTDATA' ! for i* indices
+      include 'CMTDATA' ! for i* indices, and /CMTGASREF/
       external logmean
       real logmean
       real flx(5)
@@ -369,16 +370,17 @@ C> @}
       br=0.5*rr/pr
       call rzero(jav,3)
       call rzero(uav,3)
+      vsqav=0.0
       do j=1,ldim
          jav(j)=0.5*(jal(j)+jar(j))
          uav(j)=0.5*( wl(j)+ wr(j))
+         vsqav=vsqav+0.5*(wl(j)**2+wr(j)**2)
       enddo
       rav=0.5*(rl +rr ) !temporary
       bav=0.5*(bl+br) !temporary
       phat=0.5*rav/bav
       rav=logmean(rl,rr)
       bav=logmean(bl,br)
-      hhat=0.5/
       qav=0.0
       do j=1,ldim
          qav=qav+uav(j)*jav(j) ! {{u}}.{{Ja}}
@@ -388,7 +390,8 @@ C> @}
       flx(2)=rq*uav(1)+jav(1)*phat
       flx(3)=rq*uav(2)+jav(2)*phat
       flx(4)=rq*uav(3)+jav(3)*phat
-      flx(5)=rq*hhat+phat*qav ! ({{rho}}{{E}}+{{p}}){{u}}
+      flx(5)=flx(1)*(0.5/(bav*(gmaref-1.0))-0.5*vsqav)+uav(1)*flx(2)+
+     >       uav(2)*flx(3)+uav(3)*flx(4)
       return
       end
 
