@@ -4,7 +4,9 @@ C> \ingroup isurf
 C> @{
 C> Restrict and copy face data and compute inviscid numerical flux 
 C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
-      subroutine fluxes_full_field(fstab,parameter_vector,fsharp)
+!     subroutine fluxes_full_field(fstab,parameter_vector,fsharp)
+! still not sure how to abstract these three functions out
+      subroutine fluxes_full_field_kepec
 !-----------------------------------------------------------------------
 ! JH060314 First, compute face fluxes now that we have the primitive variables
 ! JH091514 renamed from "surface_fluxes_inviscid" since it handles all fluxes
@@ -20,7 +22,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
       integer lfq,heresize,hdsize
       parameter (lfq=lx1*lz1*2*ldim*lelt,
-     >                   heresize=(nqq+3+toteq)*lfq, ! Chandrashekar
+     >                   heresize=(nqq+toteq)*lfq, ! Chandrashekar
      >                   hdsize=toteq*3*lfq) ! might not need ldim
 !    >                   heresize=(nqq+1+toteq)*lfq, ! split forms like Kennedy & Gruber
 ! JH070214 OK getting different answers whether or not the variables are
@@ -28,7 +30,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 !          method of memory management that is more transparent to me.
       common /CMTSURFLX/ fatface(heresize),notyet(hdsize)
       real fatface,notyet
-      external fstab,parameter_vector,fsharp
+!     external fstab,parameter_vector,fsharp
       integer eq
       character*32 cname
 
@@ -36,38 +38,29 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       nstate = nqq
 ! where different things live
       iwm =1
-      iwp =iwm+nstate*nfq
-! Kennedy & Gruber (2008)
-!     iflx=iwp+nfq ! only duplicate one quantity at a time,
-                   ! so offset iflx only one field from iwp
+      iwp =iwm+(nstate-1)*nfq  ! duplicate one conserved variable at a time for jumps in LLF
+                               ! tuck it before jph=nqq
 ! Chandrashekar (2013)
-      iflx=iwp+3*nfq ! storage for duplicates and {{rho}}[[ui]]
-                     ! so offset iflx three field from iwp
+      iflx=iwm+nstate*nfq
 
       call rzero(fatface(iflx),nfq*toteq)
-
-! fill parameter vector z for two-point flux applied at faces
-! start with primitive variables at faces
-! This should probably be folded into the argument routines
 
 ! just multipy by {{phi}}
 ! until we can verify correct multiphase two-point fluxes
 !     call faceu(1,fatface(iwm+nfq*(jrhof-1)))
+
+! stabilization first
+! LLF for equations 1 through 4 (mass & momentum)
       call fillq(jux, vx,    fatface(iwm),fatface(iwp))
       call fillq(juy, vy,    fatface(iwm),fatface(iwp))
       call fillq(juz, vz,    fatface(iwm),fatface(iwp))
-      call fillq(jpr, pr,    fatface(iwm),fatface(iwp)) ! test KG w/like this
       call fillq(jph, phig,  fatface(iwm),fatface(iwp))
-
-! stabilization first.
       call fillq(jsnd,csound,fatface(iwm),fatface(iwp))
-      call fstab(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
 
-! need total energy, not internal. this must be folded into parameter_vector!
-      i_cvars=(ju5-1)*nfq+1
-!     call faceu(toteq,fatface(i_cvars)) ! should persist from llf_euler
-      call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
+      call llf_euler_vec(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
 
+
+      call fillq(jpr, pr,    fatface(iwm),fatface(iwp))
 ! ONLY needed by Kennedy-Gruber (2008) as written. This is done in fstab
 ! for Chandrashekar (2013), but overwrites jsnd for KG and friends.
 !     call fillq(jrhof,vtrans,fatface(iwm),fatface(iwp))
@@ -75,7 +68,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 !           conserving fluxes have z=q, so I just divide total energy by
 !           U1 here since Kennedy-Gruber needs E
 
-      call parameter_vector(fatface(iwm),nfq,nstate)
+!     call parameter_vector(fatface(iwm),nfq,nstate)
 
 ! z- -> z^, which is {{z}} for Kennedy-Gruber, Pirozzoli, and some parts
 !           of other energy-conserving fluxes.
@@ -83,7 +76,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
 ! z^ -> F#. Some parameter-vector stuff can go here too as long as it's all
 !           local to a given element.
-      call fsharp(fatface(iwm),fatface(iflx),nstate,toteq)
+!     call fsharp(fatface(iwm),fatface(iflx),nstate,toteq)
 
 !     i_cvars=iwm!(ju1-1)*nfq+1
 !     do eq=1,toteq
@@ -99,6 +92,7 @@ C> @}
       end
 
 !-----------------------------------------------------------------------
+
 
       subroutine faceu(ivar,yourface)
 ! get faces of conserved variables stored contiguously
@@ -608,6 +602,64 @@ C> @}
 !-----------------------------------------------------------------------
 ! JUNKYARD
 !-----------------------------------------------------------------------
+
+      subroutine fluxes_full_field_chold
+!-----------------------------------------------------------------------
+! Chandrashekar KEPEC flux done in the most redundant and expensive way
+! possible. not recommended
+!-----------------------------------------------------------------------
+      include 'SIZE'
+      include 'DG'
+      include 'SOLN'
+      include 'CMTDATA'
+      include 'INPUT'
+
+      integer lfq,heresize,hdsize
+      parameter (lfq=lx1*lz1*2*ldim*lelt,
+     >                   heresize=nqq*3*lfq,! guarantees transpose of Q+ fits
+     >                   hdsize=toteq*3*lfq) ! might not need ldim
+! JH070214 OK getting different answers whether or not the variables are
+!          declared locally or in common blocks. switching to a different
+!          method of memory management that is more transparent to me.
+      common /CMTSURFLX/ fatface(heresize),notyet(hdsize)
+      real fatface,notyet
+      integer eq
+      character*32 cname
+
+      nstate = nqq
+      nfq=lx1*lz1*2*ldim*nelt
+! where different things live
+      iwm =1
+      iwp =iwm+nstate*nfq
+      iflx=iwp+nstate*nfq
+ 
+      call fillq(jrhof,vtrans,fatface(iwm),fatface(iwp))
+      call fillq(jux, vx,    fatface(iwm),fatface(iwp))
+      call fillq(juy, vy,    fatface(iwm),fatface(iwp))
+      call fillq(juz, vz,    fatface(iwm),fatface(iwp))
+      call fillq(jpr, pr,    fatface(iwm),fatface(iwp))
+      call fillq(jthm,t,     fatface(iwm),fatface(iwp))
+      call fillq(jsnd,csound,fatface(iwm),fatface(iwp))
+      call fillq(jph, phig,  fatface(iwm),fatface(iwp))
+
+      i_cvars=(ju1-1)*nfq+1
+      do eq=1,toteq
+         call faceu(eq,fatface(i_cvars))
+! JH080317 at least get the product rule right until we figure out how
+!          we want the governing equations to look
+         call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
+         i_cvars=i_cvars+nfq
+      enddo
+      call face_state_commo(fatface(iwm),fatface(iwp),nfq,nstate
+     >                     ,dg_hndl)
+
+! Now do all fluxes for all boundaries, both F# and stabilized
+!     call InviscidBC(fatface(iflx))
+! just for periodic test cases
+      call KEPEC_duplicated(fatface(iwm),fatface(iwp),fatface(iflx))
+
+      return
+      end
 
       subroutine fluxes_full_field_old
 !-----------------------------------------------------------------------

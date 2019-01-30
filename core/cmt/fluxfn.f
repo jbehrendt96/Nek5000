@@ -519,3 +519,70 @@ C> @}
       call invcol2(fatface(1,ju5),fatface(1,jph),nf)
       return
       end
+
+!-----------------------------------------------------------------------
+! JUNKYARD
+!-----------------------------------------------------------------------
+
+      subroutine KEPEC_duplicated(wminus,wplus,flux)
+! Chandrashekar KEPEC flux done the expensive, naive way.
+      include 'SIZE'
+      include 'INPUT' ! do we need this?
+      include 'GEOM' ! for unx
+      include 'CMTDATA' ! do we need this without outflsub?
+      include 'TSTEP' ! for ifield?
+      include 'DG'
+      external logmean
+
+! ==============================================================================
+! Arguments
+! ==============================================================================
+      integer nstate,nflux
+      real wminus(lx1*lz1,2*ldim,nelt,nqq),
+     >     wplus(lx1*lz1,2*ldim,nelt,nqq),
+     >     flux(lx1*lz1,2*ldim,nelt,toteq)
+
+! ==============================================================================
+! Locals
+! ==============================================================================
+
+      integer e,f,fdim,i,k,nxz,nface
+      parameter (lfd=lx1*lz1)
+! nx,ny,nz : outward facing unit normal components
+! jaco_c   : fdim-D GLL grid Jacobian
+!
+      COMMON /SCRNS/ jaco_c(lx1*lz1)
+      real jaco_c
+      real ul(5),ur(5),wl(4),wr(4),jal(3),jar(3),flx(5)
+
+      nface = 2*ldim
+      nxz   = lx1*lz1
+
+      do e=1,nelt
+      do f=1,nface
+
+         call rzero(jal,3)
+         do i=1,nxz
+            jal(1)=unx(i,1,f,e)
+            jal(2)=uny(i,1,f,e)
+            if (if3d) jal(3)=unz(i,1,f,e)
+            ul(1)=wminus(i,f,e,ju1)
+            ul(2)=wminus(i,f,e,ju2)
+            ul(3)=wminus(i,f,e,ju3)
+            ul(4)=wplus(i,f,e,ju4)
+            ur(1)=wplus(i,f,e,ju1)
+            ur(2)=wplus(i,f,e,ju2)
+            ur(3)=wplus(i,f,e,ju3)
+            ur(4)=wplus(i,f,e,ju4)
+            wl(1)=wminus(i,f,e,jux)
+            wl(2)=wminus(i,f,e,jux)
+            wl(3)=wminus(i,f,e,jux)
+            wl(ipr)=wminus(i,f,e,jpr)
+            wr(1)=wplus(i,f,e,jux)
+            wr(2)=wplus(i,f,e,jux)
+            wr(3)=wplus(i,f,e,jux)
+            wr(ipr)=wplus(i,f,e,jpr)
+            call copy(jar,jal,3)
+            call kepec_ch(flx,ul,ur,wl,wr,jal,jar)
+! max wave speed
+            al=

@@ -132,26 +132,39 @@ c---------------------------------------------------------------------
 !      parameter (jthm=1)     ! T
 
 ! Chandrashekar (2013) KEPEC
-      parameter (jux  =1)     ! u
-      parameter (juy  =2)     ! v
-      parameter (juz  =3)     ! w
-      parameter (jrhof=4)    ! rho on faces
-      parameter (jsnd =5)     ! a ! overwritten by rho in KG and other EP split forms
-      parameter (jthm =6)   ! Actually beta
-      parameter (jpr  =7)     ! P
-      parameter (ju5=8)     ! 1/(logmean of beta), then hhat
-      parameter (nqq=9) ! confusing, but wow. 18x(2+1) -> 7+1. What savings
-      parameter (jph  =nqq)   ! phi_g
+!     parameter (jux  =1)     ! u
+!     parameter (juy  =2)     ! v
+!     parameter (juz  =3)     ! w
+!     parameter (jrhof=4)    ! rho on faces
+!     parameter (jsnd =5)     ! a ! overwritten by rho in KG and other EP split forms
+!     parameter (jthm =6)   ! Actually beta
+!     parameter (jpr  =7)     ! P
+!     parameter (ju5=8)     ! 1/(logmean of beta), then hhat
+!     parameter (nqq=9) ! confusing, but wow. 18x(2+1) -> 7+1. What savings
+!     parameter (jph  =nqq)   ! phi_g
+      parameter (jrhof=1)     ! u
+      parameter (jux =2)     ! u
+      parameter (juy =3)     ! v
+      parameter (juz =4)     ! w
+      parameter (jpr =5)     ! P
+      parameter (jthm=6)     ! T
+      parameter (jsnd=7)     ! a
+      parameter (jph =8)     ! phi_g
+      parameter (ju1=9)   ! U1
+      parameter (ju2=10)   ! U2
+      parameter (ju3=11)   ! U3
+      parameter (ju4=12)   ! U4
+      parameter (nqq=12)
 ! legacy indices not long for this world
       parameter (jcvf=1)     ! rho*cv
       parameter (jcpf=1)    ! rho*cp
       parameter (jmuf=1)    ! mu
       parameter (jkndf=1)   ! K
       parameter (jlamf=1)   ! lambda
-      parameter (ju1=1)   ! U1
-      parameter (iu2=1)   ! U2
-      parameter (ju3=1)   ! U3
-      parameter (ju4=1)   ! U4
+!     parameter (ju1=1)   ! U1
+!     parameter (iu2=1)   ! U2
+!     parameter (ju3=1)   ! U3
+!     parameter (ju4=1)   ! U4
 
 ! indices for sequentially-stored (quantity-innermost) parameter vectors
 ! used for waux in fluxdiv routines and w* in BC routines
