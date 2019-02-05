@@ -108,7 +108,8 @@ C> Store it in res1
 
       integer lfq,heresize,hdsize
       parameter (lfq=lx1*lz1*2*ldim*lelt,
-     >                   heresize=(nqq+toteq)*lfq,
+!    >                   heresize=(nqq+toteq)*lfq,
+     >                   heresize=nqq*3*lfq,
      >                   hdsize=toteq*3*lfq) ! might not need ldim
 ! not sure if viscous surface fluxes can live here yet
       common /CMTSURFLX/ flux(heresize),graduf(hdsize)
@@ -169,7 +170,13 @@ C> on interior faces \f$\mathbf{U}^-\f$ and neighbor faces
 C> \f$\mathbf{U}^+\f$; store in CMTSURFLX
 !     call fluxes_full_field_old
 !     call fluxes_full_field(llf_euler_vec,rhoe_to_e,kennedygruber_vec)
-      call fluxes_full_field_kepec
+!     call fluxes_full_field_kepec
+!-----------------------------------------------------------------------
+! Chandrashekar KEPEC flux done in the most redundant and expensive way
+! possible. not recommended
+!-----------------------------------------------------------------------
+      include 'SIZE'
+      call fluxes_full_field_chold
 
 C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       nstate=nqq

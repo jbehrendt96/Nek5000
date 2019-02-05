@@ -142,19 +142,17 @@ c---------------------------------------------------------------------
 !     parameter (ju5=8)     ! 1/(logmean of beta), then hhat
 !     parameter (nqq=9) ! confusing, but wow. 18x(2+1) -> 7+1. What savings
 !     parameter (jph  =nqq)   ! phi_g
+
+! Chandrashekar (2013) KEPEC_duplicated quick and dirty test drive
       parameter (jrhof=1)     ! u
       parameter (jux =2)     ! u
       parameter (juy =3)     ! v
       parameter (juz =4)     ! w
       parameter (jpr =5)     ! P
-      parameter (jthm=6)     ! T
-      parameter (jsnd=7)     ! a
-      parameter (jph =8)     ! phi_g
-      parameter (ju1=9)   ! U1
-      parameter (ju2=10)   ! U2
-      parameter (ju3=11)   ! U3
-      parameter (ju4=12)   ! U4
-      parameter (nqq=12)
+      parameter (jsnd=6)     ! a
+      parameter (ju5 =7)     ! U for LLF_vec
+      parameter (nqq=8)
+      parameter (jph  =nqq)   ! phi_g
 ! legacy indices not long for this world
       parameter (jcvf=1)     ! rho*cv
       parameter (jcpf=1)    ! rho*cp

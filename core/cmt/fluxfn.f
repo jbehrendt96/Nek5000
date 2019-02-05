@@ -546,7 +546,7 @@ C> @}
 ! Locals
 ! ==============================================================================
 
-      integer e,f,fdim,i,k,nxz,nface
+      integer e,f,fdim,i,k,nxz,nface,eq
       parameter (lfd=lx1*lz1)
 ! nx,ny,nz : outward facing unit normal components
 ! jaco_c   : fdim-D GLL grid Jacobian
@@ -558,6 +558,10 @@ C> @}
       nface = 2*ldim
       nxz   = lx1*lz1
 
+! zero out LLF flux for energy equation from llf_euler_vec until rewrite or
+! replacement
+      call rzero(flux(1,1,1,toteq),nface*nxz*nelt)
+
       do e=1,nelt
       do f=1,nface
 
@@ -566,23 +570,46 @@ C> @}
             jal(1)=unx(i,1,f,e)
             jal(2)=uny(i,1,f,e)
             if (if3d) jal(3)=unz(i,1,f,e)
-            ul(1)=wminus(i,f,e,ju1)
-            ul(2)=wminus(i,f,e,ju2)
-            ul(3)=wminus(i,f,e,ju3)
-            ul(4)=wplus(i,f,e,ju4)
-            ur(1)=wplus(i,f,e,ju1)
-            ur(2)=wplus(i,f,e,ju2)
-            ur(3)=wplus(i,f,e,ju3)
-            ur(4)=wplus(i,f,e,ju4)
+            ul(1)=wminus(i,f,e,jrhof)
+            call rzero(ul(2),toteq-1)
+            ur(1)=wplus(i,f,e,jrhof)
+            call rzero(ur(2),toteq-1)
             wl(1)=wminus(i,f,e,jux)
-            wl(2)=wminus(i,f,e,jux)
-            wl(3)=wminus(i,f,e,jux)
+            wl(2)=wminus(i,f,e,juy)
+            wl(3)=wminus(i,f,e,juz)
             wl(ipr)=wminus(i,f,e,jpr)
             wr(1)=wplus(i,f,e,jux)
-            wr(2)=wplus(i,f,e,jux)
-            wr(3)=wplus(i,f,e,jux)
+            wr(2)=wplus(i,f,e,juy)
+            wr(3)=wplus(i,f,e,juz)
             wr(ipr)=wplus(i,f,e,jpr)
             call copy(jar,jal,3)
             call kepec_ch(flx,ul,ur,wl,wr,jal,jar)
-! max wave speed
-            al=
+! now do stabilization flux for energy. w*(:,jsnd) should still have lambda_max
+            amax=wminus(i,e,f,jsnd)
+            rav=0.5*(ul(1) +ur(1) ) !temporary
+            bl=0.5*ul(1)/wl(ipr)
+            br=0.5*ur(1)/wr(ipr)
+            bav=logmean(bl,br)
+! Delta in the Reciprocal of Beta's AVerage =: DRBAV
+            drbav=1.0/br-1.0/bl
+! V+ dot V- =: VPDVM
+            vpdvm=wr(1)*wl(1)+wr(2)*wl(2)+wr(3)*wl(3)
+            flx(5)=flx(5)-
+     >            0.5*amax*(0.5/((gmaref-1.0)*bav)+vpdvm*(ur(1)-ul(1)))
+            thetmp=0.0
+! thetmp=temporary variable storing {{\rho}}([[1/beta]]/(2(g-1))+{{u_i}}[[u_i]])
+            do j=1,ldim
+               thetmp=thetmp+(wl(j)+wr(j))*0.5*(wr(j)-wl(j))
+            enddo
+            thetmp=rav*(thetmp+drbav*0.5/(gmaref-1.0))
+            flx(5)=flx(5)-0.5*amax*thetmp
+! increment flux array (already has contribution from LLF stabilization)
+            do eq=1,toteq ! stride lol
+               flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq)
+            enddo
+         enddo
+      enddo
+      enddo
+
+      return
+      end

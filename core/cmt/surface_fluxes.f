@@ -632,24 +632,20 @@ C> @}
       iwm =1
       iwp =iwm+nstate*nfq
       iflx=iwp+nstate*nfq
+
+      call rzero(fatface(iflx),nfq*toteq)
  
       call fillq(jrhof,vtrans,fatface(iwm),fatface(iwp))
       call fillq(jux, vx,    fatface(iwm),fatface(iwp))
       call fillq(juy, vy,    fatface(iwm),fatface(iwp))
       call fillq(juz, vz,    fatface(iwm),fatface(iwp))
       call fillq(jpr, pr,    fatface(iwm),fatface(iwp))
-      call fillq(jthm,t,     fatface(iwm),fatface(iwp))
       call fillq(jsnd,csound,fatface(iwm),fatface(iwp))
       call fillq(jph, phig,  fatface(iwm),fatface(iwp))
 
-      i_cvars=(ju1-1)*nfq+1
-      do eq=1,toteq
-         call faceu(eq,fatface(i_cvars))
-! JH080317 at least get the product rule right until we figure out how
-!          we want the governing equations to look
-         call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
-         i_cvars=i_cvars+nfq
-      enddo
+      call llf_euler_vec(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
+
+! Duplicate everything
       call face_state_commo(fatface(iwm),fatface(iwp),nfq,nstate
      >                     ,dg_hndl)
 
