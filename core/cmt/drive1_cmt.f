@@ -175,7 +175,7 @@ C> \f$\mathbf{U}^+\f$; store in CMTSURFLX
 ! Chandrashekar KEPEC flux done in the most redundant and expensive way
 ! possible. not recommended
 !-----------------------------------------------------------------------
-      include 'SIZE'
+
       call fluxes_full_field_chold
 
 C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
@@ -183,7 +183,10 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       nfq=lx1*lz1*2*ldim*nelt
       iwm =1
       iwp =iwm+nstate*nfq
-      iflx=iwp+nfq ! ok this needs to be segregated and CMTSURFLX redeclared.
+! KEPEC hopefully streamlined
+!     iflx=iwp+nfq ! ok this needs to be segregated and CMTSURFLX redeclared.
+! KEPEC done naively via duplicated
+      iflx=iwp+nstate*nfq ! ok this needs to be segregated and CMTSURFLX redeclared.
                    ! W+ depends on flux function and may not always be 1
       do eq=1,toteq
          ieq=(eq-1)*ndg_face+iflx

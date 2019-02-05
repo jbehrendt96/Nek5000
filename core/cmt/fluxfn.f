@@ -595,7 +595,7 @@ C> @}
 ! V+ dot V- =: VPDVM
             vpdvm=wr(1)*wl(1)+wr(2)*wl(2)+wr(3)*wl(3)
             flx(5)=flx(5)-
-     >            0.5*amax*(0.5/((gmaref-1.0)*bav)+vpdvm*(ur(1)-ul(1)))
+     >            0.5*amax*(0.5/((gmaref-1.0)*bav)+vpdvm)*(ur(1)-ul(1))
             thetmp=0.0
 ! thetmp=temporary variable storing {{\rho}}([[1/beta]]/(2(g-1))+{{u_i}}[[u_i]])
             do j=1,ldim
@@ -605,7 +605,7 @@ C> @}
             flx(5)=flx(5)-0.5*amax*thetmp
 ! increment flux array (already has contribution from LLF stabilization)
             do eq=1,toteq ! stride lol
-               flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq)
+               flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq)*jface(i,1,f,e)
             enddo
          enddo
       enddo
