@@ -532,6 +532,7 @@ C> @}
       include 'CMTDATA' ! do we need this without outflsub?
       include 'TSTEP' ! for ifield?
       include 'DG'
+      real logmean
       external logmean
 
 ! ==============================================================================
