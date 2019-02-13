@@ -653,6 +653,7 @@ C> @}
 !     call InviscidBC(fatface(iflx))
 ! just for periodic test cases
       call KEPEC_duplicated(fatface(iwm),fatface(iwp),fatface(iflx))
+!     call InviscidBC(fatface(iflx)) ! roll back to remember where you did this for KG
 
       return
       end
