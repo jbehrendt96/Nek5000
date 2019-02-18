@@ -585,7 +585,7 @@ C> @}
             wr(ipr)=wplus(i,f,e,jpr)
             call copy(jar,jal,3)
             call kepec_ch(flx,ul,ur,wl,wr,jal,jar)
-           goto 888
+
 ! now do stabilization flux for energy. w*(:,jsnd) should still have lambda_max
             amax=wminus(i,e,f,jsnd)
             rav=0.5*(ul(1) +ur(1) ) !temporary
@@ -607,7 +607,7 @@ C> @}
             thetmp=rav*(thetmp+drbav*0.5/(gmaref-1.0))
 !           flx(5)=flx(5)-0.5*amax*thetmp ! amax already has  1/2 from llf_euler_vec
             flx(5)=flx(5)-amax*thetmp
- 888      continue
+
 ! increment flux array (already has contribution from LLF stabilization)
             do eq=1,toteq ! stride lol
                flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq)*jface(i,1,f,e)
