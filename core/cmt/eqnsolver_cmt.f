@@ -184,7 +184,7 @@ C> Convective volume terms formed and differentiated^T here
 !          external parameter_vector routine use use for vectorized
 !          flux functions. There's a case to be made for the hierarchy
 !          of vars -> parm -> flux function, and may even be faster
-      external kennedygruber
+      external kennedygruber,kepec_ch
 
       n=3*lx1*ly1*lz1*toteq
 
@@ -194,9 +194,10 @@ C> Convective volume terms formed and differentiated^T here
       call contravariant_flux(totalh(1,1,eq),convh(1,1,eq),rx(1,1,e),1)
       enddo
 
-! two-point, KEP/EC
 !     call fluxdiv_2point_scr(res1,totalh,e,rx(1,1,e),kennedygruber)
-      call fluxdiv_2point_noscr(res1,totalh,e,rx(1,1,e),kennedygruber)
+!     call fluxdiv_2point_noscr(res1,totalh,e,rx(1,1,e),kennedygruber)
+! two-point, KEP/EC
+      call fluxdiv_2point_noscr(res1,totalh,e,rx(1,1,e),kepec_ch)
 
       return
       end

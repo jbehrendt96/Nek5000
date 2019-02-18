@@ -643,7 +643,7 @@ C> @}
       call fillq(jsnd,csound,fatface(iwm),fatface(iwp))
       call fillq(jph, phig,  fatface(iwm),fatface(iwp))
 
-      call llf_euler_vec(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
+!     call llf_euler_vec(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
 
 ! Duplicate everything
       call face_state_commo(fatface(iwm),fatface(iwp),nfq,nstate
