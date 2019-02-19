@@ -587,7 +587,7 @@ C> @}
             call kepec_ch(flx,ul,ur,wl,wr,jal,jar)
 
 ! now do stabilization flux for energy. w*(:,jsnd) should still have lambda_max
-            amax=wminus(i,e,f,jsnd)
+            amax=wminus(i,f,e,jsnd)
             rav=0.5*(ul(1) +ur(1) ) !temporary
             bl=0.5*ul(1)/wl(ipr)
             br=0.5*ur(1)/wr(ipr)
