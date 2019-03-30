@@ -180,11 +180,6 @@ C> Convective volume terms formed and differentiated^T here
       include 'CMTDATA'
       include 'GEOM'
       integer e,eq
-! JH011119 We need a "sequential" version of an
-!          external parameter_vector routine use use for vectorized
-!          flux functions. There's a case to be made for the hierarchy
-!          of vars -> parm -> flux function, and may even be faster
-      external kennedygruber,kepec_ch
 
       n=3*lx1*ly1*lz1*toteq
 
@@ -194,16 +189,16 @@ C> Convective volume terms formed and differentiated^T here
       call contravariant_flux(totalh(1,1,eq),convh(1,1,eq),rx(1,1,e),1)
       enddo
 
-!     call fluxdiv_2point_scr(res1,totalh,e,rx(1,1,e),kennedygruber)
-!     call fluxdiv_2point_noscr(res1,totalh,e,rx(1,1,e),kennedygruber)
+!     call fluxdiv_2point_scr(res1,totalh,e,rx(1,1,e))
+!     call fluxdiv_2point_noscr(res1,totalh,e,rx(1,1,e))
 ! two-point, KEP/EC
-      call fluxdiv_2point_noscr(res1,totalh,e,rx(1,1,e),kepec_ch)
+      call fluxdiv_2point_noscr(res1,totalh,e,rx(1,1,e))
 
       return
       end
 C> @}
 
-      subroutine fluxdiv_2point_slow(res,e,ja,fluxfunction)
+      subroutine fluxdiv_2point_slow(res,e,ja)
       include 'SIZE'
       include 'DG'
       include 'GEOM' ! diagnostic. conflicts with ja
@@ -211,7 +206,6 @@ C> @}
       include 'CMTDATA'
 ! JH062018 two-point energy-preserving/SBP flux divergence volume integral, slow and naive
       integer e,eq
-      external fluxfunction
       real res(lx1,ly1,lz1,lelt,toteq) ! CMTDATA lurks
       real ja(lx1,ly1,lz1,ldim,ldim)   ! rst outermost
 ! scratch element for extra variables (hardcoded) and conserved variables U
@@ -222,12 +216,7 @@ C> @}
       real flx(5)
 
       nxyz=lx1*ly1*lz1
-      call copy(zauxt(1,iux),vx(1,1,1,e),nxyz)
-      call copy(zauxt(1,iuy),vy(1,1,1,e),nxyz)
-      call copy(zauxt(1,iuz),vz(1,1,1,e),nxyz)
-      call copy(zauxt(1,ipr),pr(1,1,1,e),nxyz)
-      call transpose(zaux,nparm,zauxt,nxyz)
-      call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
+      call cmt_usrz(zaux,zauxt,ut,e,nparm)
 
       call rzero(jat,9*lx1*ly1*lz1)
       do j=1,ldim
@@ -247,7 +236,7 @@ C> @}
       do ix=1,lx1
 ! r-direction
          do l=1,lx1
-            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
+            call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
      >                         zaux(1,ix,iy,iz),zaux(1,l,iy,iz),
      >                         jat(1,1,ix,iy,iz),jat(1,1,l,iy,iz))
             do eq=1,toteq
@@ -257,7 +246,7 @@ C> @}
          enddo
 ! s-direction
          do l=1,ly1
-            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
+            call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
      >                         zaux(1,ix,iy,iz),zaux(1,ix,l,iz),
      >                         jat(1,2,ix,iy,iz),jat(1,2,ix,l,iz))
             do eq=1,toteq
@@ -275,7 +264,7 @@ C> @}
       do ix=1,lx1
 ! t-direction
          do l=1,lz1
-            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
+            call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
      >                         zaux(1,ix,iy,iz),zaux(1,ix,iy,l),
      >                         jat(1,3,ix,iy,iz),jat(1,3,ix,iy,l))
             do eq=1,toteq
@@ -293,7 +282,7 @@ C> @}
 
 !-----------------------------------------------------------------------
 
-      subroutine fluxdiv_2point_scr(res,fcons,e,ja,fluxfunction)
+      subroutine fluxdiv_2point_scr(res,fcons,e,ja)
       include 'SIZE'
       include 'DG'
       include 'SOLN'
@@ -302,9 +291,8 @@ C> @}
 !          in the contravariant frame, call fluxdiv_2point, and increment res
 !          for e^th element.
 !          Metric terms Ja probably shouldn't be an argument but whatever.
-!          fluxfunction is an argument in the spirit of Gassner, Winters & Kopriva
+!          cmt_usr2pt passes arguments to F# in the usr file
       integer e,eq
-      external fluxfunction
       real res(lx1,ly1,lz1,lelt,toteq) ! CMTDATA lurks
       real ja(lx1,ly1,lz1,ldim,ldim)   ! rst outermost
       real fcons(lx1,ly1,lz1,3,toteq)   ! consistent ``1-point'' flux
@@ -317,12 +305,7 @@ C> @}
       real flx(5)
 
       nxyz=lx1*ly1*lz1
-      call copy(zauxt(1,iux),vx(1,1,1,e),nxyz)
-      call copy(zauxt(1,iuy),vy(1,1,1,e),nxyz)
-      call copy(zauxt(1,iuz),vz(1,1,1,e),nxyz)
-      call copy(zauxt(1,ipr),pr(1,1,1,e),nxyz)
-      call transpose(zaux,nparm,zauxt,nxyz)
-      call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
+      call cmt_usrz(zaux,zauxt,ut,e,nparm)
 
       call rzero(jat,9*lx1*ly1*lz1)
       do j=1,ldim
@@ -343,7 +326,7 @@ C> @}
          call rzero(rhsscr,toteq*lx1)
          do ix=1,lx1
             do l=ix+1,lx1
-               call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
+               call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
      >                            zaux(1,ix,iy,iz),zaux(1,l,iy,iz),
      >                            jat(1,1,ix,iy,iz),jat(1,1,l,iy,iz))
                do eq=1,toteq
@@ -365,7 +348,7 @@ C> @}
 
 ! consider repacking ut and zaux with iy in second place
 ! diagnostic kg is consistent in r and s
-!            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,iz),
+!            call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,ix,iy,iz),
 !     >                            zaux(1,ix,iy,iz),zaux(1,ix,iy,iz),
 !     >                            jat(1,2,ix,iy,iz),jat(1,2,ix,iy,iz))
 !               write(60+eq,'(5e15.7)')
@@ -378,7 +361,7 @@ C> @}
          call rzero(rhsscr,toteq*ly1)
          do iy=1,ly1
             do l=iy+1,ly1
-               call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
+               call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
      >                            zaux(1,ix,iy,iz),zaux(1,ix,l,iz),
      >                            jat(1,2,ix,iy,iz),jat(1,2,ix,l,iz))
                do eq=1,toteq
@@ -409,7 +392,7 @@ C> @}
          call rzero(rhsscr,toteq*lz1)
          do iz=1,lz1
             do l=iz+1,lz1
-               call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
+               call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
      >                            zaux(1,ix,iy,iz),zaux(1,ix,iy,l),
      >                            jat(1,3,ix,iy,iz),jat(1,3,ix,iy,l))
                do eq=1,toteq
@@ -437,7 +420,7 @@ C> @}
 
 !-----------------------------------------------------------------------
 
-      subroutine fluxdiv_2point_noscr(res,fcons,e,ja,fluxfunction)
+      subroutine fluxdiv_2point_noscr(res,fcons,e,ja)
       include 'SIZE'
       include 'DG'
       include 'SOLN'
@@ -448,12 +431,10 @@ C> @}
 !          in the contravariant frame, call fluxdiv_2point, and increment res
 !          for e^th element.
 !          Metric terms Ja probably shouldn't be an argument but whatever.
-!          fluxfunction is an argument in the spirit of Gassner, Winters & Kopriva
+!          cmt_usr2pt passes arguments to F# in the usr file
 !          and FLUXO (github.com/project-fluxo/fluxo)
-!          res is LOCAL RHS (not indexed by e)
       integer e,eq
-      external fluxfunction
-      real res(lx1,ly1,lz1,lelt,toteq) ! CMTDATA lurks
+      real res(lx1,ly1,lz1,lelt,toteq) ! res1 lurks in CMTDATA
       real ja(lx1,ly1,lz1,ldim,ldim)   ! rst outermost
       real fcons(lx1,ly1,lz1,3,toteq)   ! consistent ``1-point'' flux
 ! scratch element for extra variables (hardcoded) and conserved variables U
@@ -464,17 +445,7 @@ C> @}
       real zaux,ut,zauxt,jat,rhsscr
       real flx(5)
 
-      nxyz=lx1*ly1*lz1
-! JH011119 We need to factor this into a "sequential" version of an
-!          external parameter_vector routine use use for vectorized
-!          flux functions. There's a case to be made for the hierarchy
-!          of vars -> parm -> flux function, and may even be faster
-      call copy(zauxt(1,iux),vx(1,1,1,e),nxyz)
-      call copy(zauxt(1,iuy),vy(1,1,1,e),nxyz)
-      call copy(zauxt(1,iuz),vz(1,1,1,e),nxyz)
-      call copy(zauxt(1,ipr),pr(1,1,1,e),nxyz)
-      call transpose(zaux,nparm,zauxt,nxyz)
-      call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
+      call cmt_usrz(zaux,zauxt,ut,e,nparm)
 
       call rzero(jat,9*lx1*ly1*lz1)
       do j=1,ldim
@@ -494,7 +465,7 @@ C> @}
       do ix=1,lx1
 ! r-direction
          do l=ix+1,lx1
-            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
+            call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,l,iy,iz),
      >                            zaux(1,ix,iy,iz),zaux(1,l,iy,iz),
      >                            jat(1,1,ix,iy,iz),jat(1,1,l,iy,iz))
             do eq=1,toteq
@@ -510,7 +481,7 @@ C> @}
 
 ! s-direction
          do l=iy+1,ly1
-            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
+            call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,ix,l,iz),
      >                            zaux(1,ix,iy,iz),zaux(1,ix,l,iz),
      >                            jat(1,2,ix,iy,iz),jat(1,2,ix,l,iz))
             do eq=1,toteq
@@ -525,7 +496,7 @@ C> @}
 
 ! t-direction
          do l=iz+1,lz1
-            call fluxfunction(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
+            call cmt_usr2pt(flx,ut(1,ix,iy,iz),ut(1,ix,iy,l),
      >                            zaux(1,ix,iy,iz),zaux(1,ix,iy,l),
      >                            jat(1,3,ix,iy,iz),jat(1,3,ix,iy,l))
             do eq=1,toteq

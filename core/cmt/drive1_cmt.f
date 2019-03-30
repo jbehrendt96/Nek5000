@@ -114,12 +114,6 @@ C> Store it in res1
 ! not sure if viscous surface fluxes can live here yet
       common /CMTSURFLX/ flux(heresize),graduf(hdsize)
       real graduf
-! external declarations of various subroutines for different flux functions go here. I haven't
-! figured out where I want to abstract out different parts of the fluxes yet.
-!     external trivial
-!     external rhoe_to_e ! parameter vector function (dummy arg is parameter_vector)
-!     external llf_euler_vec ! stabilization flux fstab
-!     external kennedygruber_vec ! surface flux fsharp
 
       integer e,eq
       real wkj(lx1+lxd)
@@ -168,15 +162,8 @@ C> Store it in res1
 C> Restrict via \f$\mathbf{E}\f$ to get primitive and conserved variables
 C> on interior faces \f$\mathbf{U}^-\f$ and neighbor faces
 C> \f$\mathbf{U}^+\f$; store in CMTSURFLX
-!     call fluxes_full_field_old
-!     call fluxes_full_field(llf_euler_vec,rhoe_to_e,kennedygruber_vec)
-!     call fluxes_full_field_kepec
-!-----------------------------------------------------------------------
-! Chandrashekar KEPEC flux done in the most redundant and expensive way
-! possible. not recommended
-!-----------------------------------------------------------------------
 
-      call fluxes_full_field_chold
+      call cmt_usrsurf
 
 C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       nstate=nqq

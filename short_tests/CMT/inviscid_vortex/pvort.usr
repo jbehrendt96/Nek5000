@@ -17,9 +17,6 @@
       time=time_cmt
       dt=dt_cmt
 
-      if (mod(istep,iostep).eq.0) call comp_vort3(vrt,wk1,wk2,vx,vy,vz)
-      if (mod(istep,iostep).eq.0) call outpost(vx,vy,vz,vrt,t,'vrt')
-
       return
       end
 
@@ -316,4 +313,50 @@ c
 
       return
       end
+
 c-----------------------------------------------------------------------
+
+      subroutine cmt_usr2pt(flx,ul,ur,wl,wr,jal,jar)
+      include 'SIZE' ! for ldim,toteq
+      real flx(5) ! probably should be toteq
+      real ul(5),ur(5),wl(4),wr(4),jal(3),jar(3)
+! two point flux functions have this signature and appear in cmt/fluxfn.f
+! these are used for all non-vectorized surface fluxes (including BC)
+! and all volume fluxes
+
+! Kennedy and Gruber (2008) KEP split form
+!     call kennedygruber(flx,ul,ur,wl,wr,jal,jar)
+
+! Chandrashekar (2013) KEPEC flux for perfect gases
+      call kepec_ch(flx,ul,ur,wl,wr,jal,jar)
+      return
+      end
+
+c-----------------------------------------------------------------------
+
+      subroutine cmt_usrz(z,zt,ut,e,nparm)
+! fills parameter vector z for one element.
+      include 'SIZE' ! for toteq, lx*
+      integer e
+      real z(nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
+     >     zt(lx1*ly1*lz1,nparm)
+
+! default for KEPEC and most split forms.
+      call parameter_vector_vol(z,zt,ut,e,nparm) ! default in cmt/fluxfn.f
+
+! versions for entropy-conserving fluxes like Ismail & Roe go here.
+
+      return
+      end
+
+c-----------------------------------------------------------------------
+
+      subroutine cmt_usrsurf
+! inefficient version of Chandrashekar (2013) KEPEC flux with ad hoc
+! stabilization of Gassner, Winters and Kopriva (2016) Eq. 3.29 in
+! energy and local Lax-Friedrichs on surface fluxes for mass and
+! momentum equations
+      call fluxes_full_field_chold
+
+      return
+      end

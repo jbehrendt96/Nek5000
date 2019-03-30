@@ -521,6 +521,32 @@ C> @}
       end
 
 !-----------------------------------------------------------------------
+
+      subroutine parameter_vector_vol(z,zt,ut,e,idum)
+! JH033019 fills z with nparm parameters, quantity-innermost/sequential
+!          for evaluating 2-point fluxes for volume integrals
+!          of vars -> parm -> flux function, and may even be faster
+! JH033019 so far this seems good for KEPEC and split fluxes.
+!          Ismail & Roe (2009) may need something different
+      include 'SIZE'
+      include 'SOLN'
+      include 'CMTDATA' ! for i* indices and nparm
+
+      integer e
+      real z(nparm,lx1,ly1,lz1),ut(toteq,lx1,ly1,lz1),
+     >     zt(lx1*ly1*lz1,nparm)
+
+      nxyz=lx1*ly1*lz1
+      call copy(zt(1,iux),vx(1,1,1,e),nxyz)
+      call copy(zt(1,iuy),vy(1,1,1,e),nxyz)
+      call copy(zt(1,iuz),vz(1,1,1,e),nxyz)
+      call copy(zt(1,ipr),pr(1,1,1,e),nxyz)
+      call transpose(z,nparm,zt,nxyz)
+      call transpose(ut,toteq,u(1,1,1,1,e),nxyz)
+      return
+      end
+
+!-----------------------------------------------------------------------
 ! JUNKYARD
 !-----------------------------------------------------------------------
 
