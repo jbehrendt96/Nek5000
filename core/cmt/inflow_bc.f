@@ -2,6 +2,7 @@ C> @file Dirichlet states for inflow boundary conditions
 C> wrapper for other BC routines. Just one for now. More to come.
       subroutine inflow(f,e,wminus,wplus,uminus,uplus,nvar)
       INCLUDE 'SIZE'
+      INCLUDE 'CMTSIZE'
       INCLUDE 'INPUT'
       INCLUDE 'CMTBCDATA'
       integer nvar,f,e

@@ -236,7 +236,8 @@ C> @}
       unrml=abs(unrml)+al
       unrmr=abs(unrmr)+ar
       lambda=0.5*max(unrml,unrmr)
-      do i=1,toteq ! bake the minus sign into the formula here
+!     do i=1,toteq ! bake the minus sign into the formula here
+      do i=1,5 ! don't want to deal with CMTSIZE and isnd!=5 here
 !        flx(i)=-lambda*(ur(i)-ul(i))
          flx(i)=lambda*(ul(i)-ur(i))
       enddo
@@ -260,7 +261,6 @@ C> @}
                                       ! U+ for a single conserved variable
       real flux(lx1*lz1*2*ldim*nelt,toteq) ! intent(inout); incremented
 
-      parameter (lfq=lx1*lz1*2*ldim*lelt)
       common /SCRNS/ nx(lx1*lz1,2*ldim,lelt),ny(lx1*lz1,2*ldim,lelt),
      >               nz(lx1*lz1,2*ldim,lelt),jscr(lfq)
       real nx,ny,nz,jscr
@@ -412,7 +412,6 @@ C> @}
       real z(lx1*lz1*2*ldim*nelt,nstate),
      >     flux(lx1*lz1*2*ldim*nelt,nflux)
       
-      parameter (lfq=lx1*lz1*2*ldim*lelt)
       common /SCRNS/ scrf(lfq),scrg(lfq),scrh(lfq),fdot(lfq),jscr(lfq),
      >                 nx(lx1*lz1,2*ldim,lelt),ny(lx1*lz1,2*ldim,lelt),
      >                 nz(lx1*lz1,2*ldim,lelt)

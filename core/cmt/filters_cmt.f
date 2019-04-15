@@ -59,6 +59,7 @@ c---------------------------------------------------------------------
       subroutine filtercv(f,nx,nz,w1,w2,ft,if3d,dmax)
 c     taken from filterq in navier5.f
       include 'SIZE'
+      include 'CMTSIZE'
       include 'TSTEP'
     
       COMMON /solnconsvar/ U(LX1,LY1,LZ1,TOTEQ,lelt) 

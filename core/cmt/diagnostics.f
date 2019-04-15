@@ -68,6 +68,7 @@ c-----------------------------------------------------------------------
 c----------------------------------------------------------------------
       subroutine out_fld_nek
       include 'SIZE'
+      include 'CMTSIZE'
       include 'SOLN'
       COMMON /solnconsvar/ U(LX1,LY1,LZ1,TOTEQ,lelt)
      >                    ,jface(lx1,lz1,2*ldim,lelt)
@@ -192,6 +193,7 @@ c      write(6,*)wfnav(1:i1),'.',citer(is:il)
 c----------------------------------------------------------------------
       subroutine mass_balance(if3d)
       INCLUDE 'SIZE'
+      INCLUDE 'CMTSIZE'
       INCLUDE 'GEOM'
       INCLUDE 'MASS'
       INCLUDE 'TSTEP'

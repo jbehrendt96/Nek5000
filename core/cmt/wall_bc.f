@@ -89,7 +89,8 @@ C> @file wall_bc.f Dirichlet states for wall boundary conditions
       end
 
       subroutine wallbc_inviscid(f,e,wminus,wplus,uminus,uplus,nvar)
-      INCLUDE 'SIZE'
+      include 'SIZE'
+      include 'CMTDATA' ! for toteq via CMTSIZE
 
       integer nvar,f,e
       real wminus(nvar,lx1*lz1),wplus(nvar,lx1*lz1),

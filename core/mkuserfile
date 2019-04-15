@@ -112,6 +112,50 @@ c automatically added by makenek
       end
 _ACEOF
 fi
+
+if ! cat $CASENAME.f | grep -qi "subroutine.*cmt_usrz" ; then
+cat >> $CASENAME.f << _ACEOF
+
+c automatically added by makenek
+      subroutine cmt_usrz
+! parameter vector z for one element
+      include 'SIZE'
+      include 'TOTAL'
+      include 'CMTDATA'
+
+      return
+      end
+_ACEOF
+fi
+
+if ! cat $CASENAME.f | grep -qi "subroutine.*cmt_usr2pt" ; then
+cat >> $CASENAME.f << _ACEOF
+
+c automatically added by makenek
+      subroutine cmt_usr2pt
+! 2-point flux function F#, quantity-innermost
+      include 'SIZE'
+      include 'TOTAL'
+      include 'CMTDATA'
+
+      return
+      end
+_ACEOF
+fi
+
+if ! cat $CASENAME.f | grep -qi "subroutine.*cmt_usrsurf" ; then
+cat >> $CASENAME.f << _ACEOF
+
+c automatically added by makenek
+      subroutine cmt_usrsurf ! for full surface flux in CMT-nek
+      include 'SIZE'
+      include 'TOTAL'
+      include 'CMTDATA'
+
+      return
+      end
+_ACEOF
+fi
 if [ -e "cmtparticles.usrp" ]
 then
 echo 'Particles found CMT'

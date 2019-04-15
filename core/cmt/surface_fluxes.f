@@ -6,13 +6,15 @@ C> Restrict and copy face data and compute inviscid numerical flux
 C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 !     subroutine fluxes_full_field(fstab,parameter_vector,fsharp)
 ! still not sure how to abstract these three functions out
-      subroutine fluxes_full_field_kepec
+!     subroutine fluxes_full_field_kepec
+!     iwp =iwm+(nstate-1)*nfq  ! you're going to try to be clever later
+!     iflx=iwm+nstate*nfq
+
+      subroutine fluxes_full_field_kg
 !-----------------------------------------------------------------------
-! JH060314 First, compute face fluxes now that we have the primitive variables
-! JH091514 renamed from "surface_fluxes_inviscid" since it handles all fluxes
-!          that we compute from variables stored for the whole field (as
-!          opposed to one element at a time).
-! JH070918 redone for two-point fluxes 
+! JH041419 Kennedy and Gruber (2008) split form adapted to DGSEM and
+!          fully vectorized for state -> parameter vector -> gs_op ->
+!          flux. Local Lax-Friedrichs for stabilization/penalizing jumps.
 !-----------------------------------------------------------------------
       include 'SIZE'
       include 'DG'
@@ -20,17 +22,12 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       include 'CMTDATA'
       include 'INPUT'
 
-      integer lfq,heresize,hdsize
-      parameter (lfq=lx1*lz1*2*ldim*lelt,
-     >                   heresize=(nqq+toteq)*lfq, ! Chandrashekar
-     >                   hdsize=toteq*3*lfq) ! might not need ldim
-!    >                   heresize=(nqq+1+toteq)*lfq, ! split forms like Kennedy & Gruber
-! JH070214 OK getting different answers whether or not the variables are
-!          declared locally or in common blocks. switching to a different
-!          method of memory management that is more transparent to me.
+! JH070219 "heresize" and "hdsize" come from a failed attempt at managing
+!          memory in CMTSURFLX by redeclaration that was abandoned before
+!          the two-point split form. They need to be taken care of in
+!          CMTSIZE and consistent with the desired subroutine
       common /CMTSURFLX/ fatface(heresize),notyet(hdsize)
       real fatface,notyet
-!     external fstab,parameter_vector,fsharp
       integer eq
       character*32 cname
 
@@ -38,10 +35,9 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       nstate = nqq
 ! where different things live
       iwm =1
-      iwp =iwm+(nstate-1)*nfq  ! duplicate one conserved variable at a time for jumps in LLF
+      iwp =iwm+nstate*nfq  ! duplicate one conserved variable at a time for jumps in LLF
                                ! tuck it before jph=nqq
-! Chandrashekar (2013)
-      iflx=iwm+nstate*nfq
+      iflx=iwp+nstate*nfq
 
       call rzero(fatface(iflx),nfq*toteq)
 
@@ -59,16 +55,15 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
       call llf_euler_vec(fatface(iwm),fatface(iwp),fatface(iflx),nstate)
 
-
       call fillq(jpr, pr,    fatface(iwm),fatface(iwp))
 ! ONLY needed by Kennedy-Gruber (2008) as written. This is done in fstab
 ! for Chandrashekar (2013), but overwrites jsnd for KG and friends.
-!     call fillq(jrhof,vtrans,fatface(iwm),fatface(iwp))
+      call fillq(jrhof,vtrans,fatface(iwm),fatface(iwp))
 ! q- -> z-. Kennedy-Gruber, Pirozzoli, and most energy-
 !           conserving fluxes have z=q, so I just divide total energy by
 !           U1 here since Kennedy-Gruber needs E
 
-!     call parameter_vector(fatface(iwm),nfq,nstate)
+      call rhoe_to_e(fatface(iwm),nfq,nstate)
 
 ! z- -> z^, which is {{z}} for Kennedy-Gruber, Pirozzoli, and some parts
 !           of other energy-conserving fluxes.
@@ -76,7 +71,7 @@ C> \f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
 ! z^ -> F#. Some parameter-vector stuff can go here too as long as it's all
 !           local to a given element.
-!     call fsharp(fatface(iwm),fatface(iflx),nstate,toteq)
+      call kennedygruber_vec(fatface(iwm),fatface(iflx),nstate,toteq)
 
 !     i_cvars=iwm!(ju1-1)*nfq+1
 !     do eq=1,toteq
@@ -227,6 +222,7 @@ C> @}
 ! functions to be used where needed for boundary points too, after *bc routines
 ! provide Dirichlet ``rind'' states in wplus and uplus.
       include 'SIZE'
+      include 'CMTSIZE'
       real flux(toteq,npt),wminus(nstate,npt),wplus(nstate,npt),
      >   jaminus(3,npt),japlus(3,npt),uminus(toteq,npt),uplus(toteq,npt)
       external fluxfunction
@@ -254,7 +250,7 @@ C> @}
       include 'SIZE'
       include 'INPUT' ! do we need this?
       include 'GEOM' ! for unx
-      include 'CMTDATA' ! do we need this without outflsub?
+      include 'CMTDATA' ! do we need this without outflsub? It has toteq now
       include 'TSTEP' ! for ifield?
       include 'DG'
 
@@ -518,6 +514,7 @@ C> @}
 ! Acts on ALL boundary faces because I'm lazy. SET NEUMANN BC AFTER THIS
 ! CALL. BCFLUX IS PICKIER ABOUT THE BOUNDARY FACES IT ACTS ON.
       include 'SIZE'
+      include 'CMTSIZE'
       include 'TOTAL'
       integer e,eq,f
       real flux(lx1*lz1,2*ldim,nelt,toteq)
@@ -562,6 +559,7 @@ C> @}
 !          physical fluxes on GLL faces and storing them in the flux
 !          pile of faces for a call to surface_integral_full
       include 'SIZE'
+      include 'CMTSIZE'
       include 'INPUT'
       include 'GEOM' ! for unx
       include 'DG'
@@ -614,13 +612,6 @@ C> @}
       include 'CMTDATA'
       include 'INPUT'
 
-      integer lfq,heresize,hdsize
-      parameter (lfq=lx1*lz1*2*ldim*lelt,
-     >                   heresize=nqq*3*lfq,! guarantees transpose of Q+ fits
-     >                   hdsize=toteq*3*lfq) ! might not need ldim
-! JH070214 OK getting different answers whether or not the variables are
-!          declared locally or in common blocks. switching to a different
-!          method of memory management that is more transparent to me.
       common /CMTSURFLX/ fatface(heresize),notyet(hdsize)
       real fatface,notyet
       integer eq
@@ -672,13 +663,6 @@ C> @}
       include 'CMTDATA'
       include 'INPUT'
 
-      integer lfq,heresize,hdsize
-      parameter (lfq=lx1*lz1*2*ldim*lelt,
-     >                   heresize=nqq*3*lfq,! guarantees transpose of Q+ fits
-     >                   hdsize=toteq*3*lfq) ! might not need ldim
-! JH070214 OK getting different answers whether or not the variables are
-!          declared locally or in common blocks. switching to a different
-!          method of memory management that is more transparent to me.
       common /CMTSURFLX/ fatface(heresize),notyet(hdsize)
       real fatface,notyet
       integer eq

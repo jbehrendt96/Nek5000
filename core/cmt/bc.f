@@ -26,7 +26,7 @@ C> Determining rind state for Dirichlet boundary conditions
 ! Locals
 ! ==============================================================================
 
-      integer e,f,fdim,i,k,nxz,nface,ifield,eq
+      integer e,f,i,k,nxz,nface,ifield,eq
 
       common /nekcb/ cb
       character*3 cb
@@ -35,16 +35,12 @@ C> Determining rind state for Dirichlet boundary conditions
      >               uminus(toteq,lxz),uplus(toteq,lxz),
      >               flx(toteq,lxz)
       real wminus,wplus,jaminus,japlus,uminus,uplus,flx
-      external kennedygruber,llf_euler
+      external cmt_usr2pt,llf_euler
 
-      fdim=ldim-1
       nface = 2*ldim
       nxz   = lx1*lz1
       ifield= 1 ! You need to figure out the best way of dealing with
                 ! this variable
-!     if (outflsub)then
-!        call maxMachnumber
-!     endif
 
       do e=1,nelt
       do f=1,nface
@@ -83,15 +79,19 @@ C> Determining rind state for Dirichlet boundary conditions
 
 ! two-point flux
             call sequential_flux(flx,wminus,wplus,uminus,uplus,jaminus,
-     >                           japlus,kennedygruber,nparm,nxz)
+     >                           japlus,cmt_usr2pt,nparm,nxz)
             do eq=1,toteq
             do i=1,nxz
             flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
+! overwrite w(5,:) with sound speed
+               wminus(5,i)=wminus(isnd,i)
+               wplus (5,i)=wplus (isnd,i)
             enddo
             enddo
+
 ! stabilization flux
             call sequential_flux(flx,wminus,wplus,uminus,uplus,jaminus,
-     >                           japlus,llf_euler,nparm,nxz)
+     >                           japlus,llf_euler,toteq,nxz)
             do eq=1,toteq
             do i=1,nxz
             flux(i,f,e,eq)=flux(i,f,e,eq)+flx(eq,i)*jface(i,1,f,e)
@@ -163,6 +163,7 @@ C> viscosity, and strictly interior for physical viscosity.
       subroutine bcflux(flux,agradu,qminus)
 ! Need proper indexing and nekasgn & cmtasgn calls
       include 'SIZE'
+      include 'CMTSIZE'
       include 'INPUT'
       include 'DG'
 !     include 'NEKUSE'

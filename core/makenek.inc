@@ -385,14 +385,14 @@ if ! cat SIZE | grep -q 'SIZE.inc' ; then
      echo '      common/IOFLAG/nio  ! for logfile verbosity control' >> SIZE
   fi
 
-  if ! cat SIZE | grep -qi 'toteq' ; then
-  if [ $CMT -ne 0 ]; then
-      echo >>SIZE
-      echo 'c automatically added by makenek' >>SIZE
-      echo '      integer toteq' >> SIZE
-      echo '      parameter(toteq = 5  ) ! Number of conserved variables '  >>SIZE
-  fi
-  fi
+# if ! cat SIZE | grep -qi 'toteq' ; then # superceded by CMTSIZE
+# if [ $CMT -ne 0 ]; then
+#     echo >>SIZE
+#     echo 'c automatically added by makenek' >>SIZE
+#     echo '      integer toteq' >> SIZE
+#     echo '      parameter(toteq = 5  ) ! Number of conserved variables '  >>SIZE
+# fi
+# fi
 fi
 
 # tweak all SIZE file versions

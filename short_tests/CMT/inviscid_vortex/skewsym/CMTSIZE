@@ -1,0 +1,36 @@
+      integer toteq
+      parameter (toteq=5)              ! number of conserved variables. used to be in SIZE
+
+! indices for fields vectorized (quantity-outermost) parameter vectors
+      integer jux, juy, juz, jpr, jthm, jsnd, jph, ju5, nqq
+! Kennedy-Gruber, Pirozzoli, other split forms
+      parameter (jux  =1)     ! u
+      parameter (juy  =2)     ! v
+      parameter (juz  =3)     ! w
+      parameter (jrhof=4)    ! rho on faces
+      parameter (jsnd =4)     ! a ! overwritten by rho in KG and other EP split forms
+      parameter (ju5  =5)   ! U5
+      parameter (jpr  =6)     ! P
+      parameter (nqq=7) ! confusing, but wow. 18x(2+1) -> 7+1. What savings
+      parameter (jph  =nqq)   ! phi_g
+! indices not used by KG
+      parameter (jthm=1)     ! T
+
+! indices for sequentially-stored (quantity-innermost) parameter vectors
+! used for waux in fluxdiv routines and w* in BC routines
+      integer iux, iuy, iuz, ipr, ithm, isnd, iph, nparm
+      parameter (iux =1)     ! u
+      parameter (iuy =2)     ! v
+      parameter (iuz =3)     ! w
+      parameter (ipr =4)     ! P
+      parameter (irho=5)     ! density rho
+      parameter (ithm=6)     ! T
+      parameter (isnd=7)     ! a
+      parameter (iph =8)     ! phi_g
+      parameter (nparm=8)
+
+! /CMTSURFLX/ size declarations
+      integer lfq,heresize,hdsize
+      parameter (lfq=lx1*lz1*2*ldim*lelt,
+     >                   heresize=(nqq+1+toteq)*lfq,
+     >                   hdsize=toteq*3*lfq) ! might not need ldim

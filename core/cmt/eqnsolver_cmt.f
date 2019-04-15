@@ -10,10 +10,6 @@ C> and store it for one element. Store faces of \f$\mathbf{H}^d\f$ for IGU.
       include  'DG'
       include  'INPUT'
 
-      integer lfq,heresize,hdsize
-      parameter (lfq=lx1*lz1*2*ldim*lelt,
-     >                   heresize=nqq*3*lfq,! guarantees transpose of Q+ fits
-     >                   hdsize=toteq*3*lfq) ! might not need ldim
       common /CMTSURFLX/ fatface(heresize),graduf(hdsize)
       real fatface,graduf
 

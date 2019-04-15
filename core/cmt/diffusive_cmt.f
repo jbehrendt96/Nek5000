@@ -12,6 +12,7 @@ C> ummcu = \f$\mathbf{U}^--\{\{\mathbf{U}\}\}\f$
 !          spoken is "UMinus Minus the Central flux of U" which I
 !          then abbreviate as ummcu
       include 'SIZE'
+      include 'CMTSIZE'
 
       real ummcu (lx1*lz1*2*ldim*nelt,toteq) ! intent(out)
       real uminus(lx1*lz1*2*ldim*nelt,toteq) ! intent(in)
@@ -159,6 +160,7 @@ C> Implemented via maxima-generated code
 ! SOLN and CMTDATA are indexed, assuming vdiff has been filled by uservp
 ! somehow. In serious need of debugging and replacement.
       include 'SIZE'
+      include 'CMTSIZE'
       include 'INPUT'! TRIAGE?
       include 'SOLN' ! TRIAGE?
 

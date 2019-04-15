@@ -32,7 +32,7 @@
 ! usr file because it's EOS-dependent
       rgam=rgasref/(gmaref-1.0)
       do i=1,ntot
-         rho=max(vtrans(i,1,1,1,irho),ntol)
+         rho=max(vtrans(i,1,1,1,jrho),ntol)
          s(i,1,1)=rgam*rho*log(pr(i,1,1,1)/(rho**gmaref))
       enddo
 
@@ -223,7 +223,6 @@ c-----------------------------------------------------------------------
       include 'TOTAL'
       include 'CMTDATA'
       include 'DG'
-      integer lfq,heresize,hdsize
       parameter (lxyz=lx1*ly1*lz1)
       real residual(lxyz,nelt)
       integer e,f
@@ -386,7 +385,7 @@ c-----------------------------------------------------------------------
      >      sqrt(vx(i,1,1,e)**2+vy(i,1,1,e)**2+vz(i,1,1,e)**2)
          enddo
          maxeig=vlamax(wavespeed,nxyz)
-         rhomax(e)=vlamax(vtrans(1,1,1,e,irho),nxyz)
+         rhomax(e)=vlamax(vtrans(1,1,1,e,jrho),nxyz)
          do i=1,nxyz
             numax(i,e)=c_max*maxeig*meshh(e)
          enddo

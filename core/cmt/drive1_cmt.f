@@ -106,11 +106,6 @@ C> Store it in res1
       include 'CMTDATA'
       include 'CTIMER'
 
-      integer lfq,heresize,hdsize
-      parameter (lfq=lx1*lz1*2*ldim*lelt,
-!    >                   heresize=(nqq+toteq)*lfq,
-     >                   heresize=nqq*3*lfq,
-     >                   hdsize=toteq*3*lfq) ! might not need ldim
 ! not sure if viscous surface fluxes can live here yet
       common /CMTSURFLX/ flux(heresize),graduf(hdsize)
       real graduf
