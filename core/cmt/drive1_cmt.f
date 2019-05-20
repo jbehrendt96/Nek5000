@@ -38,12 +38,12 @@ c     Solve the Euler equations
          endif
          call cmt_flow_ics
          call init_cmt_timers
-         call userchk ! need more ifdefs
+         call cmtchk ! need more ifdefs
          call compute_mesh_h(meshh,xm1,ym1,zm1)
          call compute_grid_h(gridh,xm1,ym1,zm1)
          call compute_primitive_vars ! get good mu
-         if (1==2) call entropy_viscosity      ! for high diffno
-         if (1==2) call compute_transport_props! at t=0
+         call entropy_viscosity      ! for high diffno
+         call compute_transport_props! at t=0
 
       endif
 
@@ -78,16 +78,7 @@ c compute_rhs_dt for the 5 conserved variables
          enddo
       enddo
 
-      call compute_primitive_vars ! for next time step? Not sure anymore
-      call copy(t(1,1,1,1,2),vtrans(1,1,1,1,jrho),nxyz1*nelt)
       ftime = ftime + dnekclock() - ftime_dum
-
-      if (mod(istep,iostep).eq.0.or.istep.eq.1)then
-         call out_fld_nek
-         call mass_balance(if3d)
-c dump out particle information. 
-         call usr_particles_io(istep)
-      end if
 
 !     call print_cmt_timers ! NOT NOW
 
@@ -114,6 +105,8 @@ C> Store it in res1
       real wkj(lx1+lxd)
       character*32  dumchars
 
+      nxyz=lx1*ly1*lz1
+
       call compute_mesh_h(meshh,xm1,ym1,zm1)
       call compute_grid_h(gridh,xm1,ym1,zm1)
 
@@ -131,15 +124,35 @@ C> Store it in res1
 !          primitive variables. Only then can we compute CFL and/or dt.
 !-----------------------------------------------------------------------
       if(stage.eq.1) then
+!-----------------------------------------------------------------------
+! JH081018 a whole bunch of this stuff should really be done AFTER the
+!          RK loop at the END of the time step, but I lose custody
+!          of commons in SOLN between cmt_nek_advance and the rest of
+!          the time loop.
+         call copy(t(1,1,1,1,2),vtrans(1,1,1,1,irho),nxyz*nelt)
+         call cmtchk
+
+!        if (mod(istep,iostep2).eq.0) then
+!        if (mod(istep,iostep2).eq.0.or.istep.eq.1)then
+         if (mod(istep,iostep).eq.0.or.istep.eq.1)then ! migrate to iostep2
+            call out_fld_nek ! solution checkpoint for restart
+! T2 S1 rho
+! T3 S2 wave visc
+! T4 S3 epsebdg
+            call outpost2(vx,vy,vz,pr,t,ldimt,'CMT')
+            call mass_balance(if3d)
+! dump out particle information. 
+#ifdef LPM
+            call lpm_usr_particles_io(istep)
+#endif
+         end if
          call setdtcmt
          call set_tstep_coef
       endif
 
-      if (1.eq.2) call entropy_viscosity ! accessed through uservp. computes
+      call entropy_viscosity ! accessed through uservp. computes
                              ! entropy residual and max wave speed
-      if (1.eq.2) call compute_transport_props ! everything inside rk stage
-!     call smoothing(vdiff(1,1,1,1,imu)) ! still done in usr file
-! you have GOT to figure out where phig goes!!!!
+      call compute_transport_props ! everything inside rk stage
 
       ntot = lx1*ly1*lz1*lelt*toteq
       call rzero(res1,ntot)
@@ -227,7 +240,7 @@ C> for each equation (inner), one element at a time (outer)
 !-----------------------------------------------------------------------
 ! Get user defined forcing from userf defined in usr file
          call cmtusrf(e)
-         if (1 .eq. 2) call compute_gradients(e) ! gradU
+         call compute_gradients(e) ! gradU
          call convective_cmt(e)        ! convh & totalh -> res1
          do eq=1,toteq
             if (1.eq.2) then
