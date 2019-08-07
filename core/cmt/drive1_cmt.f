@@ -98,7 +98,7 @@ C> Store it in res1
       include 'CTIMER'
 
 ! not sure if viscous surface fluxes can live here yet
-      common /CMTSURFLX/ flux(heresize),graduf(hdsize)
+      common /CMTSURFLX/ fatface(heresize),graduf(hdsize)
       real graduf
 
       integer e,eq
@@ -156,7 +156,7 @@ C> Store it in res1
 
       ntot = lx1*ly1*lz1*lelt*toteq
       call rzero(res1,ntot)
-      call rzero(flux,heresize)
+      call rzero(fatface,heresize)
 !     call rzero(graduf,hdsize) ! now has new face jacobian
 
 !     !Total_eqs = 5 (we will set this up so that it can be a user 
@@ -185,7 +185,7 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
                    ! W+ depends on flux function and may not always be 1
       do eq=1,toteq
          ieq=(eq-1)*ndg_face+iflx
-         call surface_integral_full(res1(1,1,1,1,eq),flux(ieq))
+         call surface_integral_full(res1(1,1,1,1,eq),fatface(ieq))
       enddo
       dumchars='after_inviscid'
 !     call dumpresidue(dumchars,999)
@@ -203,7 +203,6 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 ! CMTDATA BETTA REFLECT THIS!!!
 !***********************************************************************
 C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}^{\intercal}\nabla v\}\} \cdot \left[\mathbf{U}\right] dA\f$
-      if (1 .eq. 2) then
 ! JH070918 conserved variables done here.
       i_cvars=(ju1-1)*nfq+1
       do eq=1,toteq
@@ -215,9 +214,11 @@ C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}^{\intercal}\nabla v\}\} \cdot \left[\ma
       enddo
       ium=(ju1-1)*nfq+iwm
       iup=(ju1-1)*nfq+iwp
-      call   imqqtu(flux(iuj),flux(ium),flux(iup))
-      call   imqqtu_dirichlet(flux(iuj),flux(iwm),flux(iwp))
-      call igtu_cmt(flux(iwm),flux(iuj),graduf) ! [[u]].{{gradv}}
+      call   imqqtu(fatface(iuj),fatface(ium),fatface(iup))
+      call   imqqtu_dirichlet(fatface(iuj),fatface(iwm),fatface(iwp))
+
+      if (1 .eq. 2) then
+      call igtu_cmt(fatface(iwm),fatface(iuj),graduf) ! [[u]].{{gradv}}
       dumchars='after_igtu'
 !     call dumpresidue(dumchars,999)
       endif
@@ -240,7 +241,7 @@ C> for each equation (inner), one element at a time (outer)
 !-----------------------------------------------------------------------
 ! Get user defined forcing from userf defined in usr file
          call cmtusrf(e)
-         call compute_gradients(e) ! gradU
+         call compute_gradients_contra(e) ! gradU
          call convective_cmt(e)        ! convh & totalh -> res1
          do eq=1,toteq
             if (1.eq.2) then

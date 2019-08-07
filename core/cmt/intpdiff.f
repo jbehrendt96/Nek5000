@@ -5,6 +5,10 @@ C> by nek5000
 !          here.
 ! JH081816 went to local_grad. redimensioned gradu. wish I could use
 !          gradm11, but stride
+! JH080719 compute_gradients superceded by compute_gradients_contra
+!          until nek5000 community teaches me the best way of handling
+!          lxd. for now, contravariant metrics are stored in rx,
+!          not in /giso1/. Hence compute_gradients_contra
 !--------------------------------------------------------------------
 
       subroutine compute_gradients(e)
@@ -62,6 +66,58 @@ C> by nek5000
          endif
 
       enddo ! equation loop
+
+      return
+      end
+
+!--------------------------------------------------------------------
+! JH080719 compute_gradients_contra computes gradU using
+!          contravariant metrics stored in rx
+!          FIGURE OUT IF GRADU*=JACMI or NOT!!!
+!--------------------------------------------------------------------
+      subroutine compute_gradients_contra(e)
+      include 'SIZE'
+      include 'INPUT'
+      include 'DXYZ'
+      include 'GEOM'
+      include 'SOLN'
+      include 'CMTDATA'
+      parameter (ldd=lxd*lyd*lzd)
+      common /ctmp1/ ur(ldd),us(ldd),ut(ldd),ud(ldd),tu(ldd)
+
+      integer eq,e
+
+!     !  Compute d/dx, d/dy and d/dz of all the cons vars
+
+      nxyz1 = lx1*ly1*lz1
+      m0 = lx1-1
+
+      do eq=1,toteq
+         call invcol3(ud,u(1,1,1,eq,e),phig(1,1,1,e),nxyz1)
+
+         if (if3d) then
+            call local_grad3(ur,us,ut,ud,m0,1,dxm1,dxtm1)
+            do j=1,ldim !xyz
+               j0=j+0 ! r_xyz
+               j3=j+3 ! s_xyz
+               j6=j+6 ! t_xyz
+               do i=1,nxyz1
+                  gradu(i,eq,j) = rx(i,j0,e)*ur(i)+
+     >                            rx(i,j3,e)*us(i)+
+     >                            rx(i,j6,e)*ut(i)
+               enddo
+            enddo
+         else
+            call local_grad2(ur,us,ud,m0,1,dxm1,dxtm1)
+            do j=1,ldim !xy
+               j0=j+0 ! r_xy
+               j2=j+2 ! s_xy
+               do i=1,nxyz1
+                  gradu(i,eq,j) = rx(i,j0,e)*ur(i)+
+     >                            rx(i,j2,e)*us(i)
+               enddo
+            enddo
+         endif
 
       return
       end
