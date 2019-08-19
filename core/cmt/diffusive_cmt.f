@@ -136,7 +136,7 @@ C> flux = \f$\mathscr{A}\f$ dU = \f$\left(\mathscr{A}^{\mbox{NS}}+\mathscr{A}^{\
       real flux(lx1*ly1*lz1,ldim),du(lx1*ly1*lz1,toteq,ldim)
 
       if (eq.eq.6) then
-         call fluxj_scalar(flux,du,e,eq)
+         call fluxj_massf(flux,du,e,eq)
 C> \f$\tau_{ij}\f$ and \f$u_j \tau_{ij}\f$.  \f$\lambda=0\f$ and \f$\kappa=0\f$
 C> for EVM
       else
@@ -299,7 +299,7 @@ C> the compressible Navier-Stokes equations (NS).
       return
       end
 !----------------------------------------------------------------------
-      subroutine fluxj_scalar(flux,du,e,eq)
+      subroutine fluxj_massf(flux,du,e,eq)
       include 'SIZE'
       include 'INPUT'
       include 'PARALLEL'
@@ -319,9 +319,37 @@ c diffuse passive scalar (species)
       do j = 1,ldim
          call addcol3(flux(1,j),du(1,1,j),t(1,1,1,e,2),n) !Y*grad(U)
          do i = 1,n     
-           flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus) 
+           flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)*2.0
            ! [grad(U_6) - Y*grad(U)]*viscocity
          enddo
+      enddo         
+
+      return
+      end
+!----------------------------------------------------------------------
+      subroutine fluxj_scalar(flux,du,e,eq)
+      include 'SIZE'
+      include 'INPUT'
+      include 'PARALLEL'
+      include 'CMTDATA'
+      include 'SOLN'
+c subroutine written JB080819
+c diffuse passive scalar (species)
+ 
+      parameter (ldd=lx1*ly1*lz1)
+      common /ctmp1/ viscscr(lx1,ly1,lz1) 
+      real viscscr
+
+      integer e,eq
+      real flux(lx1*ly1*lz1,ldim),du(lx1*ly1*lz1,toteq,ldim)
+      n=lx1*ly1*lz1
+    
+      do j = 1,ldim
+         call addcol3(flux(1,j),du(1,1,j),vdiff(i,1,1,e,inus),n) !grad(U)
+c        do i = 1,n     
+c          flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus) 
+c          ! [grad(U_6) - Y*grad(U)]*viscocity
+c        enddo
       enddo         
 
       return

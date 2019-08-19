@@ -331,9 +331,9 @@ C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}\nabla \mathbf{U}\}\} \cdot \left[v\righ
          call surface_integral_full(res1(1,1,1,1,eq),flux(ieq))
       enddo
 !     endif
-cc    dumchars='end_of_rhs'
-!     call dumpresidue(dumchars,999)
-
+      dumchars='end_of_rhs'
+      call dumpresidue(dumchars,999)
+      call exitt
       return
       end
 !-----------------------------------------------------------------------
