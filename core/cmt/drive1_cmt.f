@@ -190,8 +190,10 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       dumchars='after_inviscid'
 !     call dumpresidue(dumchars,999)
 
-!     call gtu_wrapper(fatface)
-! ACTUALLY, I need a routine like imqqtu, but that just computes [[U]]
+!     call gtu_wrapper(fatface) ! for penalty methods. not yet
+
+! JH091319 overwrite wminus with -[[U]] for viscous terms BR1
+      call fillujumpu
 
       do e=1,nelt
 !-----------------------------------------------------------------------
@@ -210,7 +212,7 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 ! Get user defined forcing from userf defined in usr file
          call cmtusrf(e)
          call compute_gradients_contra(e) ! gradU
-         call auxflux(e,diffh,fatface(iqm),fatface(iqp)) ! SEE HEAT.USR
+         call auxflux(e,diffh,fatface) ! SEE HEAT.USR
          call convective_cmt(e)        ! convh & totalh -> res1
          do eq=1,toteq
             if (1.eq.2) then

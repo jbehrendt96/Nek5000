@@ -1,6 +1,68 @@
 C> @file diffusive_cmt.f routines for diffusive fluxes.
 C> Some surface. Some volume. All pain. Jacobians and other factorizations.
 
+!-----------------------------------------------------------------------
+
+C> \ingroup vsurf
+C> @{
+C> add BR1 auxiliary flux \f$\frac{1}{2}\left(\mathbf{U}^+-\mathbf{U}^-\right)\f$
+C> to viscous flux in diffh
+      subroutine auxflux(e,flux,ujump)
+! JH091319 CHECK IF THIS IS FREESTREAM-PRESERVING!!!
+      include 'SIZE'
+      include 'INPUT' ! if3d
+      include 'GEOM'  ! for unx (and area in oldcode)
+      include 'TSTEP' ! for ifield?
+      include 'DG'
+      include 'WZ'
+      include 'MASS'
+
+      integer e
+      real ujump(lx1*lz1*2*ldim,nelt),
+     >     flux(lx1*ly1*lz1,ldim)
+      integer f,i,k,nxz,nface
+      common /scrns/ facepile(lx1*lz1,2*ldim),facen(lx1*lz1,2*ldim)
+      real facepile,facen
+
+      nface = 2*ldim
+      nxz   = lx1*lz1
+
+      l=0
+      do f=1,nface
+
+! -(U--{{U}}) = 1/2*(U+-U-), from fillujumpu
+         do i=1,nxz
+            l=l+1
+            facepile(i,f) = 0.5*ujump(l,e)
+         enddo
+
+         call col2(facepile(1,f),area(1,1,f,e),nxz)
+         call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)    
+
+         m=0
+         do k=k0,k1
+         do j=j0,j1
+         do i=i0,i1
+            m=m+1
+            facepile(m,f)=facepile(m,f)/bm1(i,j,k,e)
+         enddo
+         enddo
+         enddo
+      enddo
+
+! -(U--{{U}})*JA / wxm1(+-1) ox n
+      do k=1,ldim
+         if (k.eq.1) call col3(facen,facepile,unx(1,1,1,e),nxz*nface)
+         if (k.eq.2) call col3(facen,facepile,uny(1,1,1,e),nxz*nface)
+         if (k.eq.3) call col3(facen,facepile,unz(1,1,1,e),nxz*nface)
+         call add_face2full_cmt(1,lx1,ly1,lz1,iface_flux(1,e),
+     >                          flux(1,k),facen)
+      enddo
+
+C> @}
+      return
+      end
+
 C> \ingroup vsurf
 C> @{
 C> ummcu = \f$\mathbf{U}^--\{\{\mathbf{U}\}\}\f$

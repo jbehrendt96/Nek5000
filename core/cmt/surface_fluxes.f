@@ -1,4 +1,51 @@
 C> @file surface_fluxes.f Routines for surface terms on RHS.
+C> \ingroup isurf
+C> @{
+C> overwrite beginning of /CMTSURFLX/ with -[[U]] for viscous terms
+      subroutine fillujumpu
+!-----------------------------------------------------------------------
+! JH091319 Yes, I know things like llf_euler already did this, but
+!          1.) I decided not to dedicate memory to [[U]] in addition
+!              to primitive variables and
+!          2.) It isn't very modular to store [[U]] from split forms
+!              that need LLF. We would still need to do this again for
+!              entropy-stable fluxes!
+!-----------------------------------------------------------------------
+      include 'SIZE'
+      include 'DG'
+      include 'SOLN'
+      include 'CMTDATA'
+      include 'INPUT'
+
+! JH070219 "heresize" and "hdsize" come from a failed attempt at managing
+!          memory in CMTSURFLX by redeclaration that was abandoned before
+!          the two-point split form. They need to be taken care of in
+!          CMTSIZE and consistent with the desired subroutine
+      common /CMTSURFLX/ fatface(heresize),uplus(hdsize)
+      real fatface,uplus
+      integer eq
+      character*32 cname
+
+      nfq=lx1*lz1*2*ldim*nelt
+      nstate = toteq
+! where different things live
+      iwm =1
+      iwp =iwm+nstate*nfq  ! duplicate one conserved variable at a time for jumps in LLF
+                               ! tuck it before jph=nqq
+!     i_cvars=(ju1-1)*nfq+1
+      i_cvars=1
+      do eq=1,toteq
+         call faceu(eq,fatface(i_cvars))
+! JH091319 still need to do something about phi; does jph=nqq still?
+!        call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
+         i_cvars=i_cvars+nfq
+      enddo
+      call face_state_commo(fatface(iwm),uplus,nfq,nstate,dg_hndl)
+      call sub3(fatface(iwm),uplus,fatface(iwm),nstate*nfq)
+
+C> @}
+      return
+      end
 
 C> \ingroup isurf
 C> @{
