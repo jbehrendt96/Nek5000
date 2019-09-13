@@ -190,41 +190,9 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
       dumchars='after_inviscid'
 !     call dumpresidue(dumchars,999)
 
-               !                   -
-      iuj=iflx ! overwritten with U -{{U}}
-!-----------------------------------------------------------------------
-!                          /     1  T \
-! JH082316 imqqtu computes | I - -QQ  | U for all 5 conserved variables
-!                          \     2    /
-! which I now make the following be'neon-billboarded assumption:
-!***********************************************************************
-! ASSUME CONSERVED VARS U1 THROUGH U5 ARE CONTIGUOUSLY STORED
-! SEQUENTIALLY IN /CMTSURFLX/ i.e. that ju2=ju1+1, etc.
-! CMTDATA BETTA REFLECT THIS!!!
-!***********************************************************************
-C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}^{\intercal}\nabla v\}\} \cdot \left[\mathbf{U}\right] dA\f$
-! JH070918 conserved variables done here.
-      i_cvars=(ju1-1)*nfq+1
-      do eq=1,toteq
-         call faceu(eq,fatface(i_cvars))
-! JH080317 at least get the product rule right until we figure out how
-!          we want the governing equations to look
-         call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
-         i_cvars=i_cvars+nfq
-      enddo
-      ium=(ju1-1)*nfq+iwm
-      iup=(ju1-1)*nfq+iwp
-      call   imqqtu(fatface(iuj),fatface(ium),fatface(iup))
-      call   imqqtu_dirichlet(fatface(iuj),fatface(iwm),fatface(iwp))
+!     call gtu_wrapper(fatface)
+! ACTUALLY, I need a routine like imqqtu, but that just computes [[U]]
 
-      if (1 .eq. 2) then
-      call igtu_cmt(fatface(iwm),fatface(iuj),graduf) ! [[u]].{{gradv}}
-      dumchars='after_igtu'
-!     call dumpresidue(dumchars,999)
-      endif
-
-C> res1+=\f$\int \left(\nabla v\right) \cdot \left(\mathbf{H}^c+\mathbf{H}^d\right)dV\f$ 
-C> for each equation (inner), one element at a time (outer)
       do e=1,nelt
 !-----------------------------------------------------------------------
 ! JH082216 Since the dawn of CMT-nek we have called this particular loop
@@ -242,6 +210,7 @@ C> for each equation (inner), one element at a time (outer)
 ! Get user defined forcing from userf defined in usr file
          call cmtusrf(e)
          call compute_gradients_contra(e) ! gradU
+         call auxflux(e,diffh,fatface(iqm),fatface(iqp)) ! SEE HEAT.USR
          call convective_cmt(e)        ! convh & totalh -> res1
          do eq=1,toteq
             if (1.eq.2) then
@@ -256,6 +225,7 @@ C> for each equation (inner), one element at a time (outer)
       dumchars='after_elm'
 !     call dumpresidue(dumchars,999)
 
+! COMPARE TO HEAT.USR. IGU should be the same
 C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}\nabla \mathbf{U}\}\} \cdot \left[v\right] dA\f$
       if (1.eq.2) then
       call igu_cmt(flux(iwp),graduf,flux(iwm))
