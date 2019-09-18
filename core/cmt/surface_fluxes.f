@@ -601,6 +601,90 @@ C> @}
 
 !-----------------------------------------------------------------------
 
+      subroutine br1primary(flxscr,gdudxk)
+! Hij^{d*}
+      include 'SIZE'
+      include 'CMTDATA'
+      include 'DG'
+
+      real flxscr(lx1*lz1*2*ldim*nelt,toteq)
+      real gdudxk(lx1*lz1*2*ldim,nelt,toteq)
+      real wminus(lx1*lz1,2*ldim,nelt,nqq)
+      real const
+      integer e,eq,f
+
+      nxz = lx1*lz1
+      nfaces=2*ldim
+      nxzf=nxz*nfaces
+      nfq =lx1*lz1*nfaces*nelt
+      ntot=nfq*toteq
+
+      call copy (flxscr,gdudxk,ntot) ! save AgradU.n
+      const = 0.5
+      call cmult(gdudxk,const,ntot)
+!-----------------------------------------------------------------------
+! supa huge gs_op to get {{AgradU}}
+! operation flag is second-to-last arg, an integer
+!                                                   1 ==> +
+      call fgslib_gs_op_fields(dg_hndl,gdudxk,nfq,toteq,1,1,0)
+!-----------------------------------------------------------------------
+! 1. (AgradU.n)- on Dirichlet boundaries
+      call br1_dirichlet(flxscr,gdudxk)
+! 2. (Fbc.n)- on Neumann boundaries
+      call bcflux(flxscr,gdudxk,wminus)
+      call special_dot_n(gdudxk)
+!     call chsign(flxscr,ntot) ! needs to change with sign changes
+
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine br1_dirichlet(flux,agradu)
+! Acts on ALL boundary faces because I'm lazy. SET NEUMANN BC AFTER THIS
+! CALL. BCFLUX IS PICKIER ABOUT THE BOUNDARY FACES IT ACTS ON.
+      include 'SIZE'
+      include 'CMTSIZE'
+      include 'TOTAL'
+      integer e,eq,f
+      real flux(lx1*lz1,2*ldim,nelt,toteq)
+      real agradu(lx1*lz1,2*ldim,nelt,toteq)
+      character*3 cb2
+
+      nxz=lx1*lz1
+      nfaces=2*ldim
+
+      ifield=1
+      do e=1,nelt
+         do f=1,nfaces
+            cb2=cbc(f, e, ifield)
+            if (cb2.ne.'E  '.and.cb2.ne.'P  ') then ! cbc bndy.
+! all Dirichlet conditions result in IGU being
+! strictly one-sided, so we undo 0.5*QQT
+! UNDER THE ASSUMPTIONS THAT
+! 1. agradu's actual argument is really gdudxk AND
+! 2. IT HAS ALREADY BEEN MULTIPLIED BY 0.5
+! 3. gs_op has not changed it at all.
+! overwriting flux with it and and multiplying it 2.0 should do the trick
+               do eq=1,toteq
+!                  call copy(flux(1,f,e,eq),agradu(1,f,e,eq),nxz)
+!! in fact, that copy should not be necessary at all. TEST WITHOUT IT
+!                  call cmult(flux(1,f,e,eq),2.0,nxz)
+! JH112216 This may be better because agradu (without the factor of 1/2) is
+!          needed for some Neumann conditions (like adiabatic walls)
+                   call cmult(agradu(1,f,e,eq),2.0,nxz)
+                   call copy(flux(1,f,e,eq),agradu(1,f,e,eq),nxz)
+               enddo
+            endif
+         enddo
+      enddo
+
+      return
+      end
+
+
+!-----------------------------------------------------------------------
+
       subroutine strong_sfc_flux(flux,vflx,e,eq)
 ! JH052818 dedicated routine for stripping faces from an array vflx of
 !          physical fluxes on GLL faces and storing them in the flux

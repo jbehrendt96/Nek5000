@@ -22,7 +22,7 @@ C> each of lx1*ly1*lz1 grid points for all elements
      $   , res3(lx1,ly1,lz1,toteq,lelt) 
       common /cmtres/ res1, res2, res3
       
-      real              gradu(lx1*ly1*lz1,toteq,3)
+      real              gradu(lx1*ly1*lz1,3,toteq)
       common /cmtgradu/ gradu     
 
 ! JH060418 redimensioned these arrays to interchange equation loop.

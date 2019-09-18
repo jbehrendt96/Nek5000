@@ -212,14 +212,18 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 ! Get user defined forcing from userf defined in usr file
          call cmtusrf(e)
          call compute_gradients_contra(e) ! gradU
-         call auxflux(e,diffh,fatface) ! SEE HEAT.USR
+         i_cvars=1
+         do eq=1,toteq
+            call br1auxflux(e,gradu(1,1,eq),fatface(i_cvars)) ! SEE HEAT.USR
+            i_cvars=i_cvars+nfq
+         enddo
          call convective_cmt(e)        ! convh & totalh -> res1
          do eq=1,toteq
-            if (1.eq.2) then
-               call    viscous_cmt(e,eq) ! diffh -> half_iku_cmt -> res1
+            call    viscous_cmt(e,eq) ! diffh -> half_iku_cmt -> res1
                                              !       |
                                              !       -> diffh2graduf
 ! Compute the forcing term in each of the 5 eqs
+            if (1.eq.2) then
                call compute_forcing(e,eq)
             endif
          enddo
@@ -229,14 +233,13 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 
 ! COMPARE TO HEAT.USR. IGU should be the same
 C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}\nabla \mathbf{U}\}\} \cdot \left[v\right] dA\f$
-      if (1.eq.2) then
-      call igu_cmt(flux(iwp),graduf,flux(iwm))
+!     call igu_cmt(flux(iwp),graduf,flux(iwm))
+      call br1primary(flux(iwp),graduf)
       do eq=1,toteq
          ieq=(eq-1)*ndg_face+iwp
 !Finally add viscous surface flux functions of derivatives to res1.
          call surface_integral_full(res1(1,1,1,1,eq),flux(ieq))
       enddo
-      endif
 
 ! one last
       do eq=1,toteq

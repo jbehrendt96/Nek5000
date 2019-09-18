@@ -36,17 +36,17 @@ C> by nek5000
          if (if3d) then
             call local_grad3(ur,us,ut,ud,m0,1,dxm1,dxtm1)
             do i=1,nxyz1
-               gradu(i,eq,1) = jacmi(i,e)*(rxm1(i,1,1,e)*ur(i)+
+               gradu(i,1,eq) = jacmi(i,e)*(rxm1(i,1,1,e)*ur(i)+
      >                                     sxm1(i,1,1,e)*us(i)+
      >                                     txm1(i,1,1,e)*ut(i))
             enddo
             do i=1,nxyz1
-               gradu(i,eq,2) = jacmi(i,e)*(rym1(i,1,1,e)*ur(i)+
+               gradu(i,2,eq) = jacmi(i,e)*(rym1(i,1,1,e)*ur(i)+
      >                                     sym1(i,1,1,e)*us(i)+
      >                                     tym1(i,1,1,e)*ut(i))
             enddo
             do i=1,nxyz1
-               gradu(i,eq,3) = jacmi(i,e)*(rzm1(i,1,1,e)*ur(i)+
+               gradu(i,3,eq) = jacmi(i,e)*(rzm1(i,1,1,e)*ur(i)+
      >                                     szm1(i,1,1,e)*us(i)+
      >                                     tzm1(i,1,1,e)*ut(i))
             enddo
@@ -55,11 +55,11 @@ C> by nek5000
 
             call local_grad2(ur,us   ,ud,m0,1,dxm1,dxtm1)
             do i=1,nxyz1
-               gradu(i,eq,1) = jacmi(i,e)*(rxm1(i,1,1,e)*ur(i)+
+               gradu(i,1,eq) = jacmi(i,e)*(rxm1(i,1,1,e)*ur(i)+
      >                                     sxm1(i,1,1,e)*us(i))
             enddo
             do i=1,nxyz1
-               gradu(i,eq,2) = jacmi(i,e)*(rym1(i,1,1,e)*ur(i)+
+               gradu(i,2,eq) = jacmi(i,e)*(rym1(i,1,1,e)*ur(i)+
      >                                     sym1(i,1,1,e)*us(i))
             enddo
 
@@ -718,6 +718,64 @@ c     Compute divergence^T of ux,uy,uz -- mesh 1 to mesh 1 (vel. to vel.)
      >                       + uxyz(i,2)*rym1(i,1,1,e) )
             us(i) =jacmi(i,e)*(uxyz(i,1)*sxm1(i,1,1,e)
      >                       + uxyz(i,2)*sym1(i,1,1,e) )
+         enddo
+         call local_grad2_t(ud,ur,us,N,1,dxm1,dxtm1,tmp)
+      endif
+      call cmult(ud,csgn,nxyz)
+      call add2(grad,ud,nxyz)
+
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine gradm11_t_contra(grad,uxyz,csgn,e)
+! grad is incremented, not overwritten
+! JH091719 gradm11_t with contravariant metrics, which are stored in rx
+!          until we decide whether lxd=lx1 and rx is recycled or lxd=1
+!          and we declare our own arrays for CMT-nek contravariant metrics.
+
+      include 'SIZE'
+      include 'DXYZ'
+      include 'GEOM'
+      include 'INPUT'
+
+      parameter (lxyz=lx1*ly1*lz1)
+      real grad(lxyz),uxyz(lxyz,ldim)
+
+      common /ctmp1/ ur(lxyz),us(lxyz),ut(lxyz),ud(lxyz),tmp(lxyz)
+      real ur,us,ut,tmp
+
+      integer e
+
+      nxyz = lx1*ly1*lz1
+      call rzero(ud,nxyz)
+
+      N = lx1-1
+      if (if3d) then
+
+         do i=1,lxyz
+            ur(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
+     >                        + uxyz(i,2)*rx(i,2,e)
+     >                        + uxyz(i,3)*rx(i,3,e) )
+         enddo
+         do i=1,lxyz
+            us(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,4,e)
+     >                        + uxyz(i,2)*rx(i,5,e)
+     >                        + uxyz(i,3)*rx(i,6,e) )
+         enddo
+         do i=1,lxyz
+            ut(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,7,e)
+     >                        + uxyz(i,2)*rx(i,8,e)
+     >                        + uxyz(i,3)*rx(i,9,e) )
+         enddo
+         call local_grad3_t(ud,ur,us,ut,N,1,dxm1,dxtm1,tmp)
+      else
+         do i=1,lxyz
+            ur(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
+     >                       + uxyz(i,2)*rx(i,2,e) )
+            us(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,3,e)
+     >                       + uxyz(i,2)*rx(i,4,e) )
          enddo
          call local_grad2_t(ud,ur,us,N,1,dxm1,dxtm1,tmp)
       endif

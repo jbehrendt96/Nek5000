@@ -7,7 +7,7 @@ C> \ingroup vsurf
 C> @{
 C> add BR1 auxiliary flux \f$\frac{1}{2}\left(\mathbf{U}^+-\mathbf{U}^-\right)\f$
 C> to viscous flux in diffh
-      subroutine auxflux(e,flux,ujump)
+      subroutine br1auxflux(e,flux,ujump)
 ! JH091319 CHECK IF THIS IS FREESTREAM-PRESERVING!!!
       include 'SIZE'
       include 'INPUT' ! if3d
@@ -31,6 +31,8 @@ C> to viscous flux in diffh
       do f=1,nface
 
 ! -(U--{{U}}) = 1/2*(U+-U-), from fillujumpu
+! JH091719 I guess I didn't recycle imqqtu for this because I didn't
+!          want to change sign before add_face2full.
          do i=1,nxz
             l=l+1
             facepile(i,f) = 0.5*ujump(l,e)
@@ -365,6 +367,7 @@ C> the compressible Navier-Stokes equations (NS).
 ! diffh has D AgradU. half_iku_cmt applies D^T BM1 to it and increments
 ! the residual res with the result
       integer e ! lopsided. routine for one element must reference bm1
+                ! check if this is freestream-preserving or not
       real res(lx1,ly1,lz1),diffh(lx1*ly1*lz1,ldim)
 
       n=lx1*ly1*lz1
@@ -376,7 +379,7 @@ C> the compressible Navier-Stokes equations (NS).
 
 !     const=-1.0 ! I0
       const=1.0  ! *-1 in time march
-      call gradm11_t(res,diffh,const,e)
+      call gradm11_t_contra(res,diffh,const,e)
 
       return
       end
