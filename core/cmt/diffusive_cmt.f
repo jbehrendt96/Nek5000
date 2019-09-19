@@ -9,6 +9,9 @@ C> add BR1 auxiliary flux \f$\frac{1}{2}\left(\mathbf{U}^+-\mathbf{U}^-\right)\f
 C> to viscous flux in diffh
       subroutine br1auxflux(e,flux,ujump)
 ! JH091319 CHECK IF THIS IS FREESTREAM-PRESERVING!!!
+!     include 'CMTDATA'
+! JH091819 REWRITE TO USE JFACE AND WXM1 INSTEAD OF indexing 3D arrays
+!          with facind!!!!
       include 'SIZE'
       include 'INPUT' ! if3d
       include 'GEOM'  ! for unx (and area in oldcode)
@@ -39,20 +42,29 @@ C> to viscous flux in diffh
          enddo
 
          call col2(facepile(1,f),area(1,1,f,e),nxz)
-         call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)    
+! TRY THIS INSTEAD
+!        call col2(facepile(1,f),jface(1,1,f,e),nxz)
+         call facind(i0,i1,j0,j1,k0,k1,lx1,ly1,lz1,f)
 
          m=0
          do k=k0,k1
          do j=j0,j1
          do i=i0,i1
             m=m+1
+! TRY THIS INSTEAD
+!        do iz=1,lz1
+!        do ix=1,lx1
+!           m=m+1
+!           facepile(m,f)=facepile(m,f)/wxm1(1) or wxm1(lx1)
+! I'd still need a facind loop on jacmi or full2face on jacmi :(
             facepile(m,f)=facepile(m,f)/bm1(i,j,k,e)
          enddo
          enddo
          enddo
       enddo
 
-! -(U--{{U}})*JA / wxm1(+-1) ox n
+! facepile should have -(U--{{U}})*JA / (J*wxm1(+-1)) by now
+! -(U--{{U}})*JA / (J*wxm1(+-1)) ox n
       do k=1,ldim
          if (k.eq.1) call col3(facen,facepile,unx(1,1,1,e),nxz*nface)
          if (k.eq.2) call col3(facen,facepile,uny(1,1,1,e),nxz*nface)
