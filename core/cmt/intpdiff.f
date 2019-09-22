@@ -755,26 +755,32 @@ c     Compute divergence^T of ux,uy,uz -- mesh 1 to mesh 1 (vel. to vel.)
       if (if3d) then
 
          do i=1,lxyz
-            ur(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
+! DOES JACMI GO HERE OR NOT???
+!           ur(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
+            ur(i) = (uxyz(i,1)*rx(i,1,e)
      >                        + uxyz(i,2)*rx(i,2,e)
      >                        + uxyz(i,3)*rx(i,3,e) )
          enddo
          do i=1,lxyz
-            us(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,4,e)
+!           us(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,4,e)
+            us(i) = (uxyz(i,1)*rx(i,4,e)
      >                        + uxyz(i,2)*rx(i,5,e)
      >                        + uxyz(i,3)*rx(i,6,e) )
          enddo
          do i=1,lxyz
-            ut(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,7,e)
+!           ut(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,7,e)
+            ut(i) = (uxyz(i,1)*rx(i,7,e)
      >                        + uxyz(i,2)*rx(i,8,e)
      >                        + uxyz(i,3)*rx(i,9,e) )
          enddo
          call local_grad3_t(ud,ur,us,ut,N,1,dxm1,dxtm1,tmp)
       else
          do i=1,lxyz
-            ur(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
+!           ur(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
+            ur(i) =(uxyz(i,1)*rx(i,1,e)
      >                       + uxyz(i,2)*rx(i,2,e) )
-            us(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,3,e)
+!           us(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,3,e)
+            us(i) =(uxyz(i,1)*rx(i,3,e)
      >                       + uxyz(i,2)*rx(i,4,e) )
          enddo
          call local_grad2_t(ud,ur,us,N,1,dxm1,dxtm1,tmp)
