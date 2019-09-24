@@ -10,6 +10,7 @@ C> overwrite beginning of /CMTSURFLX/ with -[[U]] for viscous terms
 !          2.) It isn't very modular to store [[U]] from split forms
 !              that need LLF. We would still need to do this again for
 !              entropy-stable fluxes!
+! JH092319 Dirichlet BC for viscous fluxes go here
 !-----------------------------------------------------------------------
       include 'SIZE'
       include 'DG'
@@ -481,7 +482,7 @@ C> @}
 
       subroutine diffh2graduf(e,eq,graduf)
 ! peels off diffusiveH into contiguous face storage via restriction operator R
-! for now, stores {{gradU}} for igu
+! for now, stores gradU.n for QQT in igu
       include  'SIZE'
       include  'DG' ! iface
       include  'CMTDATA'
@@ -509,6 +510,43 @@ C> @}
          call addcol3(graduf(1,e,eq),hface,normal,nxzf)
       enddo
       call col2(graduf(1,e,eq),area(1,1,1,e),nxzf)
+
+      return
+      end
+
+!-------------------------------------------------------------------------------
+
+      subroutine diffh2face(e,eq,diffhf)
+! peels off diffusiveH into contiguous face storage via restriction operator R
+! for final central flux in BR1
+      include  'SIZE'
+      include  'DG' ! iface
+      include  'CMTDATA'
+      include  'GEOM'
+      integer e,eq
+! must not exceed hdsize
+! faster dot product {{Hd}}.n
+      real diffhf(lx1*lz1*2*ldim,nelt,ldim,toteq)
+! vs allowing diffhf(:,:,:,1) to overwrite [[U]]
+!     real diffhf(lx1*lz1*2*ldim,nelt,toteq,ldim)
+      common /scrns/ hface(lx1*lz1,2*ldim)
+     >              ,normal(lx1*ly1,2*ldim)
+      real hface, normal
+
+      integer f
+
+      nf    = lx1*lz1*2*ldim*nelt
+      nfaces=2*ldim
+      nxz   =lx1*lz1
+      nxzf  =nxz*nfaces
+      nxyz  = lx1*ly1*lz1
+
+      call rzero(diffhf(1,e,eq),nxzf*ldim)
+      do j =1,ldim
+         call full2face_cmt(1,lx1,ly1,lz1,iface_flux,hface,diffh(1,j)) 
+         call col2(hface,area(1,1,1,e),nxzf)
+         call copy(diffhf(1,e,j,eq),hface,nxzf)
+      enddo
 
       return
       end
@@ -602,14 +640,14 @@ C> @}
 !-----------------------------------------------------------------------
 
       subroutine br1primary(flxscr,gdudxk)
-! Hij^{d*}
+! Hij^{d*}={{Hij_d}}
       include 'SIZE'
       include 'CMTDATA'
       include 'DG'
 
       real flxscr(lx1*lz1*2*ldim*nelt,toteq)
-      real gdudxk(lx1*lz1*2*ldim,nelt,toteq)
-      real wminus(lx1*lz1,2*ldim,nelt,nqq)
+!     real gdudxk(lx1*lz1*2*ldim,nelt,toteq)
+      real gdudxk(lx1*lz1*2*ldim*nelt,ldim,toteq)
       real const
       integer e,eq,f
 
@@ -619,14 +657,13 @@ C> @}
       nfq =lx1*lz1*nfaces*nelt
       ntot=nfq*toteq
 
-      call copy (flxscr,gdudxk,ntot) ! save AgradU.n
       const = 0.5
-      call cmult(gdudxk,const,ntot)
+      call cmult(gdudxk,const,ntot*ldim)
 !-----------------------------------------------------------------------
 ! supa huge gs_op to get {{AgradU}}
 ! operation flag is second-to-last arg, an integer
 !                                                   1 ==> +
-      call fgslib_gs_op_fields(dg_hndl,gdudxk,nfq,toteq,1,1,0)
+      call fgslib_gs_op_fields(dg_hndl,gdudxk,nfq,toteq*ldim,1,1,0)
 !-----------------------------------------------------------------------
 ! 1. (AgradU.n)- on Dirichlet boundaries
       call br1_dirichlet(flxscr,gdudxk)
@@ -641,6 +678,7 @@ C> @}
 !-----------------------------------------------------------------------
 
       subroutine br1_dirichlet(flux,agradu)
+! YOU ARE HERE<> KEEP CODING
 ! Acts on ALL boundary faces because I'm lazy. SET NEUMANN BC AFTER THIS
 ! CALL. BCFLUX IS PICKIER ABOUT THE BOUNDARY FACES IT ACTS ON.
       include 'SIZE'

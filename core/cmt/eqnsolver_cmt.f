@@ -31,7 +31,10 @@ C> and store it for one element. Store faces of \f$\mathbf{H}^d\f$ for IGU.
 
       call agradu(diffh,gradu,e,eq)
 
-      call diffh2graduf(e,eq,graduf) ! on faces for QQ^T and igu_cmt
+! FIND OUT IF YOU NEED TO COMPUTE {{Hd.n}}
+!     call diffh2gradu(e,eq,graduf)
+! OR IF YOU NEED TO COMPUTE {{Hd}}.n
+      call diffh2face(e,eq,graduf)  ! on faces {{Hd}} after element loop
 
 ! volume integral involving "DG-ish" stiffness operator K
       call half_iku_cmt(res1(1,1,1,e,eq),diffh,e)

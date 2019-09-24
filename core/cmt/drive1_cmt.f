@@ -157,7 +157,6 @@ C> Store it in res1
       ntot = lx1*ly1*lz1*lelt*toteq
       call rzero(res1,ntot)
       call rzero(fatface,heresize)
-!     call rzero(graduf,hdsize) ! now has new face jacobian
 
 !     !Total_eqs = 5 (we will set this up so that it can be a user 
 !     !defined value. 5 will be its default value)
@@ -234,9 +233,9 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
 ! COMPARE TO HEAT.USR. IGU should be the same
 C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}\nabla \mathbf{U}\}\} \cdot \left[v\right] dA\f$
 !     call igu_cmt(flux(iwp),graduf,flux(iwm))
-      call br1primary(flux(iwp),graduf)
+      call br1primary(fatface(iwm),graduf)
       do eq=1,toteq
-         ieq=(eq-1)*ndg_face+iwp
+         ieq=(eq-1)*ndg_face+iwm
 !Finally add viscous surface flux functions of derivatives to res1.
          call surface_integral_full(res1(1,1,1,1,eq),flux(ieq))
       enddo

@@ -74,6 +74,7 @@ C> by nek5000
 ! JH080719 compute_gradients_contra computes gradU using
 !          contravariant metrics stored in rx
 !          FIGURE OUT IF GRADU*=JACMI or NOT!!!
+! JH092319 I vote to put *=jacmi here
 !--------------------------------------------------------------------
       subroutine compute_gradients_contra(e)
       include 'SIZE'
@@ -102,9 +103,9 @@ C> by nek5000
                j3=j+3 ! s_xyz
                j6=j+6 ! t_xyz
                do i=1,nxyz1
-                  gradu(i,eq,j) = rx(i,j0,e)*ur(i)+
+                  gradu(i,eq,j) = jacmi(i,e)*(rx(i,j0,e)*ur(i)+
      >                            rx(i,j3,e)*us(i)+
-     >                            rx(i,j6,e)*ut(i)
+     >                            rx(i,j6,e)*ut(i))
                enddo
             enddo
          else
@@ -113,8 +114,8 @@ C> by nek5000
                j0=j+0 ! r_xy
                j2=j+2 ! s_xy
                do i=1,nxyz1
-                  gradu(i,eq,j) = rx(i,j0,e)*ur(i)+
-     >                            rx(i,j2,e)*us(i)
+                  gradu(i,eq,j) = jacmi(i,e)*(rx(i,j0,e)*ur(i)+
+     >                            rx(i,j2,e)*us(i))
                enddo
             enddo
          endif
@@ -730,10 +731,13 @@ c     Compute divergence^T of ux,uy,uz -- mesh 1 to mesh 1 (vel. to vel.)
 !-----------------------------------------------------------------------
 
       subroutine gradm11_t_contra(grad,uxyz,csgn,e)
-! grad is incremented, not overwritten
+! grad is incremented, not overwritten. Suitable for adding viscous fluxes to
+! a residual.
 ! JH091719 gradm11_t with contravariant metrics, which are stored in rx
 !          until we decide whether lxd=lx1 and rx is recycled or lxd=1
 !          and we declare our own arrays for CMT-nek contravariant metrics.
+! JH092319 DO NOT MULTIPLY BY JACMI HERE!!! THIS IS ONLY DONE AT THE END
+!          of compute_rhs_and_dt (linek 246)
 
       include 'SIZE'
       include 'DXYZ'
@@ -755,19 +759,21 @@ c     Compute divergence^T of ux,uy,uz -- mesh 1 to mesh 1 (vel. to vel.)
       if (if3d) then
 
          do i=1,lxyz
-! DOES JACMI GO HERE OR NOT???
+! *=jacmi at end of compute_rhs_and_dt
 !           ur(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
             ur(i) = (uxyz(i,1)*rx(i,1,e)
      >                        + uxyz(i,2)*rx(i,2,e)
      >                        + uxyz(i,3)*rx(i,3,e) )
          enddo
          do i=1,lxyz
+! *=jacmi at end of compute_rhs_and_dt
 !           us(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,4,e)
             us(i) = (uxyz(i,1)*rx(i,4,e)
      >                        + uxyz(i,2)*rx(i,5,e)
      >                        + uxyz(i,3)*rx(i,6,e) )
          enddo
          do i=1,lxyz
+! *=jacmi at end of compute_rhs_and_dt
 !           ut(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,7,e)
             ut(i) = (uxyz(i,1)*rx(i,7,e)
      >                        + uxyz(i,2)*rx(i,8,e)
@@ -776,9 +782,11 @@ c     Compute divergence^T of ux,uy,uz -- mesh 1 to mesh 1 (vel. to vel.)
          call local_grad3_t(ud,ur,us,ut,N,1,dxm1,dxtm1,tmp)
       else
          do i=1,lxyz
+! *=jacmi at end of compute_rhs_and_dt
 !           ur(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
             ur(i) =(uxyz(i,1)*rx(i,1,e)
      >                       + uxyz(i,2)*rx(i,2,e) )
+! *=jacmi at end of compute_rhs_and_dt
 !           us(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,3,e)
             us(i) =(uxyz(i,1)*rx(i,3,e)
      >                       + uxyz(i,2)*rx(i,4,e) )

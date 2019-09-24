@@ -11,7 +11,8 @@ C> to viscous flux in diffh
 ! JH091319 CHECK IF THIS IS FREESTREAM-PRESERVING!!!
 !     include 'CMTDATA'
 ! JH091819 REWRITE TO USE JFACE AND WXM1 INSTEAD OF indexing 3D arrays
-!          with facind!!!!
+!          with facind!!!! Try removing jacmi from compute_gradients_contra
+!          and multiplying gradu by it just before viscous_cmt
       include 'SIZE'
       include 'INPUT' ! if3d
       include 'GEOM'  ! for unx (and area in oldcode)
