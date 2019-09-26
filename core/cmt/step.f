@@ -90,6 +90,7 @@ C> @file step.f time stepping and mesh spacing routines
       call glinvcol2max(diffno1,vdiff(1,1,1,1,imu), gridh,ntot,dt)
       call glinvcol2max(diffno2,vdiff(1,1,1,1,iknd),gridh,ntot,dt)
       call glinvcol2max(diffno3,vdiff(1,1,1,1,inus),gridh,ntot,dt)
+c     write(6,*) 'LOOK', imu, vdiff(1,1,1,1,imu)
 !     diffno=max(diffno1,diffno2,diffno3)
       time_cmt= time_cmt+dt
       time    = time_cmt
