@@ -645,7 +645,7 @@ C> @}
       include 'CMTDATA'
       include 'DG'
 
-      real flxscr(lx1*lz1*2*ldim*nelt,toteq)
+      real flux(lx1*lz1*2*ldim*nelt,toteq)
 !     real gdudxk(lx1*lz1*2*ldim,nelt,toteq)
       real gdudxk(lx1*lz1*2*ldim*nelt,ldim,toteq)
       real const
@@ -664,12 +664,14 @@ C> @}
 ! operation flag is second-to-last arg, an integer
 !                                                   1 ==> +
       call fgslib_gs_op_fields(dg_hndl,gdudxk,nfq,toteq*ldim,1,1,0)
-!-----------------------------------------------------------------------
-! 1. (AgradU.n)- on Dirichlet boundaries
-      call br1_dirichlet(flxscr,gdudxk)
-! 2. (Fbc.n)- on Neumann boundaries
-      call bcflux(flxscr,gdudxk,wminus)
-      call special_dot_n(gdudxk)
+      i=1
+      j=1
+      do eq=1,toteq ! {{AgradU}}.n
+         call agradu_normal_flux(flux(i),gdudxk(j))
+         i=i+nfq
+         j=j+nfq*ldim
+      enddo
+      call br1bc(flux)
 !     call chsign(flxscr,ntot) ! needs to change with sign changes
 
       return
@@ -677,17 +679,56 @@ C> @}
 
 !-----------------------------------------------------------------------
 
-      subroutine br1_dirichlet(flux,agradu)
-! YOU ARE HERE<> KEEP CODING
-! Acts on ALL boundary faces because I'm lazy. SET NEUMANN BC AFTER THIS
-! CALL. BCFLUX IS PICKIER ABOUT THE BOUNDARY FACES IT ACTS ON.
+      subroutine agradu_normal_flux(flux,gdudxk)
+! {{AgradU}}.n
+      include  'SIZE'
+      include  'DG' ! iface
+      include 'INPUT'
+      include  'CMTDATA'
+      include  'GEOM'
+      integer e!,eq
+      integer f
+      real graduf(lx1*lz1*2*ldim,nelt,ldim)
+      real flux(lx1*lz1*2*ldim,nelt)
+
+      nf    = lx1*lz1*2*ldim*nelt
+      nfaces=2*ldim
+      nxz   =lx1*lz1
+      nxzf  =nxz*nfaces
+      nxyz  = lx1*ly1*lz1
+
+      do e =1,nelt
+         call col3(flux(1,e),graduf(1,e,1),unx(1,1,1,e),nxzf)
+      enddo
+      do e =1,nelt
+         call addcol3(flux(1,e),graduf(1,e,2),uny(1,1,1,e),nxzf)
+      enddo
+      if (if3d) then
+         do e =1,nelt
+         call addcol3(flux(1,e),graduf(1,e,3),unz(1,1,1,e),nxzf)
+         enddo
+      endif
+! sign?
+      call chsign(graduf,nf)
+
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine br1bc(flux)
+!-----------------------------------------------------------------------
+! Two boundary condition operations remain even for artificial viscosity
+! 1. (AgradU)- on Dirichlet boundaries has been multiplied by 1/2, but
+! needs to be doubled because gs_op has added zeros to 1/2(AgradU)
+! 2. (Fbc.n)- on Neumann boundaries
       include 'SIZE'
       include 'CMTSIZE'
       include 'TOTAL'
       integer e,eq,f
       real flux(lx1*lz1,2*ldim,nelt,toteq)
-      real agradu(lx1*lz1,2*ldim,nelt,toteq)
       character*3 cb2
+      logical ifslip
 
       nxz=lx1*lz1
       nfaces=2*ldim
@@ -710,9 +751,9 @@ C> @}
 !                  call cmult(flux(1,f,e,eq),2.0,nxz)
 ! JH112216 This may be better because agradu (without the factor of 1/2) is
 !          needed for some Neumann conditions (like adiabatic walls)
-                   call cmult(agradu(1,f,e,eq),2.0,nxz)
-                   call copy(flux(1,f,e,eq),agradu(1,f,e,eq),nxz)
+                   call cmult(flux(1,f,e,eq),2.0,nxz)
                enddo
+               call neumann
             endif
          enddo
       enddo

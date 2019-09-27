@@ -97,7 +97,7 @@ C> Store it in res1
       include 'CMTDATA'
       include 'CTIMER'
 
-! not sure if viscous surface fluxes can live here yet
+! hdsize needs to be big enough for 15 full fields
       common /CMTSURFLX/ fatface(heresize),graduf(hdsize)
       real graduf
 
