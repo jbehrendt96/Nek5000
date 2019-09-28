@@ -541,7 +541,6 @@ C> @}
       nxzf  =nxz*nfaces
       nxyz  = lx1*ly1*lz1
 
-      call rzero(diffhf(1,e,eq),nxzf*ldim)
       do j =1,ldim
          call full2face_cmt(1,lx1,ly1,lz1,iface_flux,hface,diffh(1,j)) 
          call col2(hface,area(1,1,1,e),nxzf)
@@ -664,12 +663,8 @@ C> @}
 ! operation flag is second-to-last arg, an integer
 !                                                   1 ==> +
       call fgslib_gs_op_fields(dg_hndl,gdudxk,nfq,toteq*ldim,1,1,0)
-      i=1
-      j=1
       do eq=1,toteq ! {{AgradU}}.n
-         call agradu_normal_flux(flux(i),gdudxk(j))
-         i=i+nfq
-         j=j+nfq*ldim
+         call agradu_normal_flux(flux(1,eq),gdudxk(1,1,eq))
       enddo
       call br1bc(flux)
 !     call chsign(flxscr,ntot) ! needs to change with sign changes
@@ -679,7 +674,7 @@ C> @}
 
 !-----------------------------------------------------------------------
 
-      subroutine agradu_normal_flux(flux,gdudxk)
+      subroutine agradu_normal_flux(flux,graduf)
 ! {{AgradU}}.n
       include  'SIZE'
       include  'DG' ! iface
@@ -767,7 +762,7 @@ C> @}
       integer eq
       real flux(lx1*lz1,2*ldim,nelt,toteq)
       logical ifadiabatic
-      data /ifadiabatic/ .false. ! 
+      data ifadiabatic /.false./ 
       return
       end
 
@@ -1085,6 +1080,7 @@ C> @}
       subroutine gtu_wrapper(fatface)
       include 'SIZE'
       real fatface(*)
+      integer eq
                !                   -
       iuj=iflx ! overwritten with U -{{U}}
 !-----------------------------------------------------------------------
@@ -1116,8 +1112,6 @@ C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}^{\intercal}\nabla v\}\} \cdot \left[\ma
       call igtu_cmt(fatface(iwm),fatface(iuj),graduf) ! [[u]].{{gradv}}
 C> res1+=\f$\int \left(\nabla v\right) \cdot \left(\mathbf{H}^c+\mathbf{H}^d\right)dV\f$ 
 C> for each equation (inner), one element at a time (outer)
-      dumchars='after_igtu'
-!     call dumpresidue(dumchars,999)
       endif
       return
       end

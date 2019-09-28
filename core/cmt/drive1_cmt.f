@@ -237,7 +237,7 @@ C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}\nabla \mathbf{U}\}\} \cdot \left[v\righ
       do eq=1,toteq
          ieq=(eq-1)*ndg_face+iwm
 !Finally add viscous surface flux functions of derivatives to res1.
-         call surface_integral_full(res1(1,1,1,1,eq),flux(ieq))
+         call surface_integral_full(res1(1,1,1,1,eq),fatface(ieq))
       enddo
 
 ! one last
