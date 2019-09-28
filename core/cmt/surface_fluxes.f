@@ -721,14 +721,13 @@ C> @}
 ! Two boundary condition operations remain even for artificial viscosity
 ! 1. (AgradU)- on Dirichlet boundaries has been multiplied by 1/2, but
 ! needs to be doubled because gs_op has added zeros to 1/2(AgradU)
-! 2. (Fbc.n)- on Neumann boundaries
+! 2. (Fbc.n)- on Neumann boundaries via bcflux_br1
       include 'SIZE'
       include 'CMTSIZE'
       include 'TOTAL'
       integer e,eq,f
       real flux(lx1*lz1,2*ldim,nelt,toteq)
       character*3 cb2
-      logical ifslip
 
       nxz=lx1*lz1
       nfaces=2*ldim
@@ -738,22 +737,17 @@ C> @}
          do f=1,nfaces
             cb2=cbc(f, e, ifield)
             if (cb2.ne.'E  '.and.cb2.ne.'P  ') then ! cbc bndy.
-! all Dirichlet conditions result in IGU being
-! strictly one-sided, so we undo 0.5*QQT
+! all Dirichlet conditions result in {{}} being
 ! UNDER THE ASSUMPTIONS THAT
 ! 1. agradu's actual argument is really gdudxk AND
 ! 2. IT HAS ALREADY BEEN MULTIPLIED BY 0.5
 ! 3. gs_op has not changed it at all.
-! overwriting flux with it and and multiplying it 2.0 should do the trick
+! overwriting flux with agradu and and multiplying it 2.0 should do the trick
                do eq=1,toteq
-!                  call copy(flux(1,f,e,eq),agradu(1,f,e,eq),nxz)
-!! in fact, that copy should not be necessary at all. TEST WITHOUT IT
-!                  call cmult(flux(1,f,e,eq),2.0,nxz)
-! JH112216 This may be better because agradu (without the factor of 1/2) is
-!          needed for some Neumann conditions (like adiabatic walls)
+! JH092719 already dotted with normal. so just multiply by 2
                    call cmult(flux(1,f,e,eq),2.0,nxz)
                enddo
-               call neumann
+               call bcflux_br1(flux,f,e)
             endif
          enddo
       enddo
@@ -761,6 +755,21 @@ C> @}
       return
       end
 
+!-----------------------------------------------------------------------
+
+      subroutine bcflux_br1(flux,f,e)
+! JH092719. Placeholder for Neumann conditions in an actual Navier-Stokes
+!           solver. For artificial viscosity, we want zero viscous fluxes
+!           at all boundaries.
+      include 'SIZE'
+      include 'CMTSIZE'
+      integer f,e
+      integer eq
+      real flux(lx1*lz1,2*ldim,nelt,toteq)
+      logical ifadiabatic
+      data /ifadiabatic/ .false. ! 
+      return
+      end
 
 !-----------------------------------------------------------------------
 
