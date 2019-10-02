@@ -218,7 +218,7 @@ C> for EVM
       call fluxj_ns (flux,du,e,eq)
 C> \f$\nu_s \nabla \rho\f$, \f$\nu_s \left(\nabla \rho \right) \otimes \mathbf{u}\f$
 C> and \f$\nu_s \nabla \left(\rho e\right)\f$.  \f$\nu_s=0\f$ for Navier-Stokes
-      call fluxj_evm(flux,du,e,eq)
+!     call fluxj_evm(flux,du,e,eq)
 
 ! no idea where phi goes. put it out front
 !     call col2(flux,phig(1,1,1,e),lx1*ly1*lz1)
@@ -444,7 +444,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -489,7 +489,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -533,7 +533,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -578,7 +578,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -605,7 +605,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -626,7 +626,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -648,7 +648,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -669,7 +669,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -696,7 +696,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -718,7 +718,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -739,7 +739,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
@@ -760,7 +760,7 @@ C> the compressible Navier-Stokes equations (NS).
       include 'SOLN'
       include 'CMTDATA' ! gradu lurks
       real K,E,kmcvmu,lambdamu
-      real dU(lx1*ly1*lz1,toteq,3)
+      real dU(lx1*ly1*lz1,3,toteq)
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
