@@ -331,12 +331,12 @@ C> the compressible Navier-Stokes equations (NS).
 ! diffusion due to grad rho
       if (eq .eq. 1) then
          do j=1,ldim ! flux+= viscscr*nu_s*grad (rho)
-            call addcol3(flux(1,j),vdiff(1,1,1,e,inus),du(1,j,1),n)
+            call addcol3(flux(1,j),vdiff(1,1,1,e,jnus),du(1,j,1),n)
          enddo
       else
          if (eq.lt.toteq) then
             call copy(viscscr,du(1,eq-1,1),n)
-            call col2(viscscr,vdiff(1,1,1,e,inus),n)
+            call col2(viscscr,vdiff(1,1,1,e,jnus),n)
             call addcol3(flux(1,1),viscscr,vx(1,1,1,e),n)
             call addcol3(flux(1,2),viscscr,vy(1,1,1,e),n)
             if (if3d) call addcol3(flux(1,3),viscscr,vz(1,1,1,e),n)
@@ -350,7 +350,7 @@ C> the compressible Navier-Stokes equations (NS).
                call vdot2(viscscr,vx(1,1,1,e),vy(1,1,1,e),
      >                            vx(1,1,1,e),vy(1,1,1,e),n)
             endif
-            call col2(viscscr,vdiff(1,1,1,e,inus),n)
+            call col2(viscscr,vdiff(1,1,1,e,jnus),n)
             do j=1,ldim
                call addcol3(flux(1,j),du(1,j,1),viscscr,n)
             enddo
@@ -358,11 +358,11 @@ C> the compressible Navier-Stokes equations (NS).
             do j=1,ldim
                do eq2=2,ldim+1
                   call col4(viscscr,du(1,j,eq2),u(1,1,1,eq2,e),
-     >                           vdiff(1,1,1,e,inus),n)
+     >                           vdiff(1,1,1,e,jnus),n)
                   call invcol2(viscscr,vtrans(1,1,1,e,irho),n) ! scr=nu_s*U/rho
                   call sub2(flux(1,j),viscscr,n)
                enddo
-               call addcol3(flux(1,j),du(1,j,toteq),vdiff(1,1,1,e,inus),
+               call addcol3(flux(1,j),du(1,j,toteq),vdiff(1,1,1,e,jnus),
      >                      n)
             enddo
          endif ! eq<toteq?
