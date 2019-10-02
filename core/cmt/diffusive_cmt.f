@@ -211,7 +211,7 @@ C> flux = \f$\mathscr{A}\f$ dU = \f$\left(\mathscr{A}^{\mbox{NS}}+\mathscr{A}^{\
 ! flux is zero on entry
 !-----------------------------------------------------------------------
       integer e, eq
-      real flux(lx1*ly1*lz1,ldim),du(lx1*ly1*lz1,toteq,ldim)
+      real flux(lx1*ly1*lz1,ldim),du(lx1*ly1*lz1,3,toteq)
 
 C> \f$\tau_{ij}\f$ and \f$u_j \tau_{ij}\f$.  \f$\lambda=0\f$ and \f$\kappa=0\f$
 C> for EVM
@@ -246,7 +246,7 @@ C> Implemented via maxima-generated code
       real viscscr
 
       integer e,eq
-      real flux(lx1*ly1*lz1,ldim),gradu(lx1*ly1*lz1,toteq,ldim)
+      real flux(lx1*ly1*lz1,ldim),gradu(lx1*ly1*lz1,3,toteq)
       integer eijk3(3,3,3)
 !     data eijk2 / 0, -1, 1, 0/
       data eijk3
@@ -324,18 +324,18 @@ C> the compressible Navier-Stokes equations (NS).
       real viscscr
 
       integer e,eq,eq2
-      real flux(lx1*ly1*lz1,ldim),du(lx1*ly1*lz1,toteq,ldim)
+      real flux(lx1*ly1*lz1,ldim),du(lx1*ly1*lz1,3,toteq)
 
       n=lx1*ly1*lz1
 
 ! diffusion due to grad rho
       if (eq .eq. 1) then
          do j=1,ldim ! flux+= viscscr*nu_s*grad (rho)
-            call addcol3(flux(1,j),vdiff(1,1,1,e,inus),du(1,1,j),n)
+            call addcol3(flux(1,j),vdiff(1,1,1,e,inus),du(1,j,1),n)
          enddo
       else
          if (eq.lt.toteq) then
-            call copy(viscscr,du(1,1,eq-1),n)
+            call copy(viscscr,du(1,eq-1,1),n)
             call col2(viscscr,vdiff(1,1,1,e,inus),n)
             call addcol3(flux(1,1),viscscr,vx(1,1,1,e),n)
             call addcol3(flux(1,2),viscscr,vy(1,1,1,e),n)
@@ -352,17 +352,17 @@ C> the compressible Navier-Stokes equations (NS).
             endif
             call col2(viscscr,vdiff(1,1,1,e,inus),n)
             do j=1,ldim
-               call addcol3(flux(1,j),du(1,1,j),viscscr,n)
+               call addcol3(flux(1,j),du(1,j,1),viscscr,n)
             enddo
 
             do j=1,ldim
                do eq2=2,ldim+1
-                  call col4(viscscr,du(1,eq2,j),u(1,1,1,eq2,e),
+                  call col4(viscscr,du(1,j,eq2),u(1,1,1,eq2,e),
      >                           vdiff(1,1,1,e,inus),n)
                   call invcol2(viscscr,vtrans(1,1,1,e,irho),n) ! scr=nu_s*U/rho
                   call sub2(flux(1,j),viscscr,n)
                enddo
-               call addcol3(flux(1,j),du(1,toteq,j),vdiff(1,1,1,e,inus),
+               call addcol3(flux(1,j),du(1,j,toteq),vdiff(1,1,1,e,inus),
      >                      n)
             enddo
          endif ! eq<toteq?
@@ -449,20 +449,20 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU2x=dU(i,2,1)
-         dU3x=dU(i,3,1)
-         dU4x=dU(i,4,1)
-         dU5x=dU(i,5,1)
-         dU1y=dU(i,1,2)
+         dU2x=dU(i,1,2)
+         dU3x=dU(i,1,3)
+         dU4x=dU(i,1,4)
+         dU5x=dU(i,1,5)
+         dU1y=dU(i,2,1)
          dU2y=dU(i,2,2)
-         dU3y=dU(i,3,2)
-         dU4y=dU(i,4,2)
-         dU5y=dU(i,5,2)
-         dU1z=dU(i,1,3)
-         dU2z=dU(i,2,3)
+         dU3y=dU(i,2,3)
+         dU4y=dU(i,2,4)
+         dU5y=dU(i,2,5)
+         dU1z=dU(i,3,1)
+         dU2z=dU(i,3,2)
          dU3z=dU(i,3,3)
-         dU4z=dU(i,4,3)
-         dU5z=dU(i,5,3)
+         dU4z=dU(i,3,4)
+         dU5z=dU(i,3,5)
          rho   =vtrans(i,1,1,ie,jrho)
          cv    =vtrans(i,1,1,ie,jcv)/rho
          lambda=vdiff(i,1,1,ie,jlam)
@@ -494,20 +494,20 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU2x=dU(i,2,1)
-         dU3x=dU(i,3,1)
-         dU4x=dU(i,4,1)
-         dU5x=dU(i,5,1)
-         dU1y=dU(i,1,2)
+         dU2x=dU(i,1,2)
+         dU3x=dU(i,1,3)
+         dU4x=dU(i,1,4)
+         dU5x=dU(i,1,5)
+         dU1y=dU(i,2,1)
          dU2y=dU(i,2,2)
-         dU3y=dU(i,3,2)
-         dU4y=dU(i,4,2)
-         dU5y=dU(i,5,2)
-         dU1z=dU(i,1,3)
-         dU2z=dU(i,2,3)
+         dU3y=dU(i,2,3)
+         dU4y=dU(i,2,4)
+         dU5y=dU(i,2,5)
+         dU1z=dU(i,3,1)
+         dU2z=dU(i,3,2)
          dU3z=dU(i,3,3)
-         dU4z=dU(i,4,3)
-         dU5z=dU(i,5,3)
+         dU4z=dU(i,3,4)
+         dU5z=dU(i,3,5)
          rho   =vtrans(i,1,1,ie,jrho)
          cv    =vtrans(i,1,1,ie,jcv)/rho
          lambda=vdiff(i,1,1,ie,jlam)
@@ -538,20 +538,20 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU2x=dU(i,2,1)
-         dU3x=dU(i,3,1)
-         dU4x=dU(i,4,1)
-         dU5x=dU(i,5,1)
-         dU1y=dU(i,1,2)
+         dU2x=dU(i,1,2)
+         dU3x=dU(i,1,3)
+         dU4x=dU(i,1,4)
+         dU5x=dU(i,1,5)
+         dU1y=dU(i,2,1)
          dU2y=dU(i,2,2)
-         dU3y=dU(i,3,2)
-         dU4y=dU(i,4,2)
-         dU5y=dU(i,5,2)
-         dU1z=dU(i,1,3)
-         dU2z=dU(i,2,3)
+         dU3y=dU(i,2,3)
+         dU4y=dU(i,2,4)
+         dU5y=dU(i,2,5)
+         dU1z=dU(i,3,1)
+         dU2z=dU(i,3,2)
          dU3z=dU(i,3,3)
-         dU4z=dU(i,4,3)
-         dU5z=dU(i,5,3)
+         dU4z=dU(i,3,4)
+         dU5z=dU(i,3,5)
          rho   =vtrans(i,1,1,ie,jrho)
          cv    =vtrans(i,1,1,ie,jcv)/rho
          lambda=vdiff(i,1,1,ie,jlam)
@@ -583,11 +583,11 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU2x=dU(i,2,1)
-         dU1y=dU(i,1,2)
-         dU3y=dU(i,3,2)
-         dU1z=dU(i,1,3)
-         dU4z=dU(i,4,3)
+         dU2x=dU(i,1,2)
+         dU1y=dU(i,2,1)
+         dU3y=dU(i,2,3)
+         dU1z=dU(i,3,1)
+         dU4z=dU(i,3,4)
          rho   =vtrans(i,1,1,ie,jrho)
          lambda=vdiff(i,1,1,ie,jlam)
          mu    =vdiff(i,1,1,ie,jmu)
@@ -610,8 +610,8 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU3x=dU(i,3,1)
-         dU1y=dU(i,1,2)
+         dU3x=dU(i,1,3)
+         dU1y=dU(i,2,1)
          dU2y=dU(i,2,2)
          rho   =vtrans(i,1,1,ie,jrho)
          mu    =vdiff(i,1,1,ie,jmu)
@@ -631,9 +631,9 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU4x=dU(i,4,1)
-         dU1z=dU(i,1,3)
-         dU2z=dU(i,2,3)
+         dU4x=dU(i,1,4)
+         dU1z=dU(i,3,1)
+         dU2z=dU(i,3,2)
          rho   =vtrans(i,1,1,ie,jrho)
          mu    =vdiff(i,1,1,ie,jmu)
          u1    =vx(i,1,1,ie)
@@ -653,8 +653,8 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU3x=dU(i,3,1)
-         dU1y=dU(i,1,2)
+         dU3x=dU(i,1,3)
+         dU1y=dU(i,2,1)
          dU2y=dU(i,2,2)
          rho   =vtrans(i,1,1,ie,jrho)
          mu    =vdiff(i,1,1,ie,jmu)
@@ -674,11 +674,11 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU2x=dU(i,2,1)
-         dU1y=dU(i,1,2)
-         dU3y=dU(i,3,2)
-         dU1z=dU(i,1,3)
-         dU4z=dU(i,4,3)
+         dU2x=dU(i,1,2)
+         dU1y=dU(i,2,1)
+         dU3y=dU(i,2,3)
+         dU1z=dU(i,3,1)
+         dU4z=dU(i,3,4)
          rho   =vtrans(i,1,1,ie,jrho)
          lambda=vdiff(i,1,1,ie,jlam)
          mu    =vdiff(i,1,1,ie,jmu)
@@ -700,9 +700,9 @@ C> the compressible Navier-Stokes equations (NS).
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
-         dU1y=dU(i,1,2)
-         dU4y=dU(i,4,2)
-         dU1z=dU(i,1,3)
+         dU1y=dU(i,2,1)
+         dU4y=dU(i,2,4)
+         dU1z=dU(i,3,1)
          dU3z=dU(i,3,3)
          rho   =vtrans(i,1,1,ie,jrho)
          mu    =vdiff(i,1,1,ie,jmu)
@@ -723,9 +723,9 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU4x=dU(i,4,1)
-         dU1z=dU(i,1,3)
-         dU2z=dU(i,2,3)
+         dU4x=dU(i,1,4)
+         dU1z=dU(i,3,1)
+         dU2z=dU(i,3,2)
          rho   =vtrans(i,1,1,ie,jrho)
          mu    =vdiff(i,1,1,ie,jmu)
          u1    =vx(i,1,1,ie)
@@ -743,9 +743,9 @@ C> the compressible Navier-Stokes equations (NS).
       real flux(lx1*ly1*lz1)
       npt=lx1*ly1*lz1
       do i=1,npt
-         dU1y=dU(i,1,2)
-         dU4y=dU(i,4,2)
-         dU1z=dU(i,1,3)
+         dU1y=dU(i,2,1)
+         dU4y=dU(i,2,4)
+         dU1z=dU(i,3,1)
          dU3z=dU(i,3,3)
          rho   =vtrans(i,1,1,ie,jrho)
          mu    =vdiff(i,1,1,ie,jmu)
@@ -765,11 +765,11 @@ C> the compressible Navier-Stokes equations (NS).
       npt=lx1*ly1*lz1
       do i=1,npt
          dU1x=dU(i,1,1)
-         dU2x=dU(i,2,1)
-         dU1y=dU(i,1,2)
-         dU3y=dU(i,3,2)
-         dU1z=dU(i,1,3)
-         dU4z=dU(i,4,3)
+         dU2x=dU(i,1,2)
+         dU1y=dU(i,2,1)
+         dU3y=dU(i,2,3)
+         dU1z=dU(i,3,1)
+         dU4z=dU(i,3,4)
          rho   =vtrans(i,1,1,ie,jrho)
          lambda=vdiff(i,1,1,ie,jlam)
          mu    =vdiff(i,1,1,ie,jmu)

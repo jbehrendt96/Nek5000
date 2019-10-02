@@ -103,7 +103,7 @@ C> by nek5000
                j3=j+3 ! s_xyz
                j6=j+6 ! t_xyz
                do i=1,nxyz1
-                  gradu(i,eq,j) = jacmi(i,e)*(rx(i,j0,e)*ur(i)+
+                  gradu(i,j,eq) = jacmi(i,e)*(rx(i,j0,e)*ur(i)+
      >                            rx(i,j3,e)*us(i)+
      >                            rx(i,j6,e)*ut(i))
                enddo
@@ -114,7 +114,7 @@ C> by nek5000
                j0=j+0 ! r_xy
                j2=j+2 ! s_xy
                do i=1,nxyz1
-                  gradu(i,eq,j) = jacmi(i,e)*(rx(i,j0,e)*ur(i)+
+                  gradu(i,j,eq) = jacmi(i,e)*(rx(i,j0,e)*ur(i)+
      >                            rx(i,j2,e)*us(i))
                enddo
             enddo
