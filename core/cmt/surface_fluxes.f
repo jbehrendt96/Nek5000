@@ -639,7 +639,7 @@ C> @}
 !-----------------------------------------------------------------------
 
       subroutine br1primary(flxscr,gdudxk)
-! Hij^{d*}={{Hij_d}}
+! Hij^{d*}=JA{{Hij_d}}.n
       include 'SIZE'
       include 'CMTDATA'
       include 'DG'
@@ -675,7 +675,7 @@ C> @}
 !-----------------------------------------------------------------------
 
       subroutine agradu_normal_flux(flux,graduf)
-! {{AgradU}}.n
+! JA{{AgradU}}.n
       include  'SIZE'
       include  'DG' ! iface
       include 'INPUT'
@@ -685,11 +685,21 @@ C> @}
       integer f
       real graduf(lx1*lz1*2*ldim,nelt,ldim)
       real flux(lx1*lz1*2*ldim,nelt)
+      common /SCRNS/ jscr(lfq)
+      real jscr
 
-      nf    = lx1*lz1*2*ldim*nelt
       nfaces=2*ldim
-      nxz   =lx1*lz1
+      nxz=lx1*lz1
       nxzf  =nxz*nfaces
+      nf=nxzf*nelt
+
+! I don't know what to do with volume fraction phi, and this is my first guess
+!     call col3(jscr,jface,z(1,jph),nf) ! Jscr=JA*{{\phi_g}}
+! GET phi in HERE SOMEDAY SOON
+      call copy(jscr,jface,nf)
+! zero out jscr at boundary faces; gs_op is degenerate there.
+!     call bcmask_cmt(jscr) ! RECONCILE THIS WITH br1bc!!!
+
       nxyz  = lx1*ly1*lz1
 
       do e =1,nelt
@@ -703,6 +713,7 @@ C> @}
          call addcol3(flux(1,e),graduf(1,e,3),unz(1,1,1,e),nxzf)
          enddo
       endif
+      call col2(flux,jscr,nf)
 ! sign?
       call chsign(graduf,nf)
 
