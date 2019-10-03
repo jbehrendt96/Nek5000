@@ -482,7 +482,8 @@ C> @}
 
       subroutine diffh2graduf(e,eq,graduf)
 ! peels off diffusiveH into contiguous face storage via restriction operator R
-! for now, stores gradU.n for QQT in igu
+! for now, stores gradU.n for QQT in igu. ONLY 5 FLUXES, for {{AgradU.n}}
+! 
       include  'SIZE'
       include  'DG' ! iface
       include  'CMTDATA'
@@ -518,7 +519,7 @@ C> @}
 
       subroutine diffh2face(e,eq,diffhf)
 ! peels off diffusiveH into contiguous face storage via restriction operator R
-! for final central flux in BR1
+! for final central flux in BR1. ALL 15 FLUXES, for {{AgradU}}.n
       include  'SIZE'
       include  'DG' ! iface
       include  'CMTDATA'
@@ -543,7 +544,6 @@ C> @}
 
       do j =1,ldim
          call full2face_cmt(1,lx1,ly1,lz1,iface_flux,hface,diffh(1,j)) 
-         call col2(hface,area(1,1,1,e),nxzf)
          call copy(diffhf(1,e,j,eq),hface,nxzf)
       enddo
 
@@ -638,7 +638,7 @@ C> @}
 
 !-----------------------------------------------------------------------
 
-      subroutine br1primary(flxscr,gdudxk)
+      subroutine br1primary(flux,gdudxk)
 ! Hij^{d*}=JA{{Hij_d}}.n
       include 'SIZE'
       include 'CMTDATA'
@@ -667,7 +667,7 @@ C> @}
          call agradu_normal_flux(flux(1,eq),gdudxk(1,1,eq))
       enddo
       call br1bc(flux)
-!     call chsign(flxscr,ntot) ! needs to change with sign changes
+      call chsign(flux,ntot) ! needs to change with sign changes
 
       return
       end
@@ -677,11 +677,10 @@ C> @}
       subroutine agradu_normal_flux(flux,graduf)
 ! JA{{AgradU}}.n
       include  'SIZE'
-      include  'DG' ! iface
       include 'INPUT'
       include  'CMTDATA'
       include  'GEOM'
-      integer e!,eq
+      integer e
       integer f
       real graduf(lx1*lz1*2*ldim,nelt,ldim)
       real flux(lx1*lz1*2*ldim,nelt)
@@ -710,12 +709,10 @@ C> @}
       enddo
       if (if3d) then
          do e =1,nelt
-         call addcol3(flux(1,e),graduf(1,e,3),unz(1,1,1,e),nxzf)
+            call addcol3(flux(1,e),graduf(1,e,3),unz(1,1,1,e),nxzf)
          enddo
       endif
       call col2(flux,jscr,nf)
-! sign?
-      call chsign(graduf,nf)
 
       return
       end

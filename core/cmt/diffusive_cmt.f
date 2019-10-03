@@ -385,14 +385,18 @@ C> the compressible Navier-Stokes equations (NS).
 
       n=lx1*ly1*lz1
 
+! M
       do j=1,ldim
          call col2(diffh(1,j),bm1(1,1,1,e),n)
 !        call col2(diffh(1,j),phig(1,1,1,e),n) ! still no idea where phi goes
       enddo
 
 !     const=-1.0 ! I0
+! D^T M
       const=1.0  ! *-1 in time march
       call gradm11_t_contra(res,diffh,const,e)
+! M^{-1}D^T M
+      call invcol2(res,bm1(1,1,1,e),n)
 
       return
       end

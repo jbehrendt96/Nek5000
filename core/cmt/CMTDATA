@@ -3,6 +3,10 @@ C> \var U(lxyz,5,lelt) contains nodal values of the five conserved unknowns at
 C> each of lx1*ly1*lz1 grid points for all elements
       include 'CMTSIZE' ! new for 2019. usr/case-level declarations that
                         ! depend on flux. all for CMTSURFLX for now
+
+! jface contains free-stream-preserving computation of area PRE-DIVIDED by
+! the endpoint quadrature weight!!! This ensures surface fluxes and volume
+! fluxe functions can be added directly together at face points
       real                 u(lx1,ly1,lz1,toteq,lelt)
      >                    ,jface(lx1,lz1,2*ldim,lelt)
       common /solnconsvar/ u,jface 
