@@ -245,7 +245,7 @@ C> Implemented via maxima-generated code
       common /ctmp1/ viscscr(lx1,ly1,lz1)
       real viscscr
 
-      integer e,eq
+      integer e,eq,eq2
       real flux(lx1*ly1*lz1,ldim),gradu(lx1*ly1*lz1,3,toteq)
       integer eijk3(3,3,3)
 !     data eijk2 / 0, -1, 1, 0/
@@ -293,7 +293,9 @@ C> Implemented via maxima-generated code
          if (if3d) then
             call a53kldUldxk(flux(1,3),gradu,e)
          else
-            call rzero(gradu(1,1,3),lx1*ly1*lz1*toteq)
+            do eq2=1,toteq
+               call rzero(gradu(1,3,eq2),lx1*ly1*lz1)
+            enddo
             call rzero(vz(1,1,1,e),lx1*ly1*lz1)
          endif
          call a51kldUldxk(flux(1,1),gradu,e)
