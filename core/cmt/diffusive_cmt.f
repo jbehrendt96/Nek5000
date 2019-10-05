@@ -381,11 +381,14 @@ C> the compressible Navier-Stokes equations (NS).
       include 'MASS'
 ! diffh has D AgradU. half_iku_cmt applies D^T BM1 to it and increments
 ! the residual res with the result
+      common /ctmp0/ rscr(lx1,ly1,lz1) ! scratch element for residual.
+      real rscr
       integer e ! lopsided. routine for one element must reference bm1
                 ! check if this is freestream-preserving or not
       real res(lx1,ly1,lz1),diffh(lx1*ly1*lz1,ldim)
 
       n=lx1*ly1*lz1
+      call rzero(rscr,n)
 
 ! M
       do j=1,ldim
@@ -396,9 +399,10 @@ C> the compressible Navier-Stokes equations (NS).
 !     const=-1.0 ! I0
 ! D^T M
       const=1.0  ! *-1 in time march
-      call gradm11_t_contra(res,diffh,const,e)
+      call gradm11_t_contra(rscr,diffh,const,e)
 ! M^{-1}D^T M
-      call invcol2(res,bm1(1,1,1,e),n)
+      call invcol2(rscr,bm1(1,1,1,e),n)
+      call add2(res,rscr,n)
 
       return
       end
