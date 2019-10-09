@@ -41,7 +41,8 @@ c     Solve the Euler equations
          call cmtchk ! need more ifdefs
          call compute_mesh_h(meshh,xm1,ym1,zm1)
          call compute_grid_h(gridh,xm1,ym1,zm1)
-         call compute_primitive_vars ! get good mu
+         call compute_primitive_vars(1) ! get good mu
+         call limiter
          call entropy_viscosity      ! for high diffno
          call compute_transport_props! at t=0
 
@@ -75,8 +76,20 @@ c compute_rhs_dt for the 5 conserved variables
      >                         tcoef(3,stage)*res1(i,1,1,e,eq)
             enddo
             enddo
-         enddo
-      enddo
+         enddo ! nelt
+!-----------------------------------------------------------------------
+! JH080918 Now with solution limiters of Zhang & Shu (2010)
+!                                    and   Lv & Ihme (2015) 
+!          Also, FINALLY rewritten to consider solution at the
+!          END OF RK STAGES AND END OF TIME STEP AS THE SOLUTION OF INTEREST
+! JH081018 OK I can't do that for some reason. CHECK SOLN COMMONS BETWEEN
+!          cmt_nek_advance and istep=istep+1
+!-----------------------------------------------------------------------
+!        call compute_primitive_vars(0)
+!        call limiter
+!        call compute_primitive_vars(1)
+
+      enddo ! RK stage loop
 
       ftime = ftime + dnekclock() - ftime_dum
 
@@ -117,23 +130,35 @@ C> Store it in res1
 !     if(IFFLTR)  call filter_cmtvar(IFCNTFILT)
 !        primitive vars = rho, u, v, w, p, T, phi_g
 
-      call compute_primitive_vars
+      call compute_primitive_vars(0)
+!! JH090518 Shock detector is not ready for prime time. Lean on EVM for
+!!          sane default 
+!!     if (stage.eq.1)
+!!    >call shock_detector(t(1,1,1,1,5),vtrans(1,1,1,1,jrho),scrent)
+      call limiter
+      call compute_primitive_vars(1)
 
 !-----------------------------------------------------------------------
 ! JH072914 We can really only proceed with dt once we have current
 !          primitive variables. Only then can we compute CFL and/or dt.
 !-----------------------------------------------------------------------
       if(stage.eq.1) then
+         call setdtcmt
+         call set_tstep_coef
 !-----------------------------------------------------------------------
 ! JH081018 a whole bunch of this stuff should really be done AFTER the
 !          RK loop at the END of the time step, but I lose custody
 !          of commons in SOLN between cmt_nek_advance and the rest of
 !          the time loop.
-         call copy(t(1,1,1,1,2),vtrans(1,1,1,1,irho),nxyz*nelt)
+         call copy(t(1,1,1,1,2),vtrans(1,1,1,1,jrho),nxyz*nelt)
+!! JH070119 Tait mixture model extension. Need T(:,2) for mass fraction
+!!          of one of the two species. put mixture density (for
+!!          post-processing only) into T(:,4)           
+!c JB080119 more species change mix density, T(:,5) for 3 species
+!         call copy(t(1,1,1,1,4),vtrans(1,1,1,1,jrho),nxyz*nelt)
+!c        call copy(t(1,1,1,1,5),vtrans(1,1,1,1,jrho),nxyz*nelt)
          call cmtchk
 
-!        if (mod(istep,iostep2).eq.0) then
-!        if (mod(istep,iostep2).eq.0.or.istep.eq.1)then
          if (mod(istep,iostep).eq.0.or.istep.eq.1)then ! migrate to iostep2
             call out_fld_nek ! solution checkpoint for restart
 ! T2 S1 rho
@@ -146,8 +171,6 @@ C> Store it in res1
             call lpm_usr_particles_io(istep)
 #endif
          end if
-         call setdtcmt
-         call set_tstep_coef
       endif
 
       call entropy_viscosity ! accessed through uservp. computes

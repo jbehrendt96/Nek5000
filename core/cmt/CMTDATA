@@ -42,9 +42,9 @@ C> each of lx1*ly1*lz1 grid points for all elements
       common /forcedata/ usrf 
 
       real c_sub_e,c_max,meshh(lelt),maxdiff,gridh(lx1*ly1*lz1,lelt),
-     $     nu_s,rhomax(lelt),maxres(lelt)
+     >    nu_s,epsebdg(lelt),maxres(lelt),se0(lelt)
       common /planned_Additions/ c_sub_e,c_max,meshh,maxdiff,
-     $        gridh,nu_s,rhomax,maxres
+     $        gridh,nu_s,rhomax,epsebdg,maxres,se0
 
 c We assume we will be working with one gas. Therefore Rgas need not be 
 c full filed. To begin with we assume calorically perfect gas.
@@ -65,7 +65,7 @@ c---------------------------------------------------------------------
      $    MWref,CWref,MCref,CCref,
      $    AAref,
      $    BBref,R1ref,R2ref,OMref,
-     $    AA,BB,OM,CC,CW
+     $    AA,BB,OM,CC,CW,se0const
 
       common /cmtgasref/cpgref,cvgref,cvjref,gmaref,rgasref,molmass,
      $    MAref,MBref,CAref,CBref,   ! NTN for mixed model
@@ -73,7 +73,7 @@ c---------------------------------------------------------------------
      $    MWref,CWref,MCref,CCref,
      $    AAref,
      $    BBref,R1ref,R2ref,OMref,
-     $    AA,BB,OM,CC,CW
+     $    AA,BB,OM,CC,CW,se0const
 
       integer              stage,nstage
       common /tstepstage/ stage,nstage
