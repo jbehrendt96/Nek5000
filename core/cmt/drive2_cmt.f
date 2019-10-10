@@ -115,8 +115,6 @@ c     call setup_cmt_param
      >          (tau-(pres-exp(se0const)*rho**gmaref))
          epsebdg(e)=min(epsebdg(e),1.0)
          epsebdg(e)=max(epsebdg(e),0.0)
-! diagnostic
-!        call cfill(t(1,1,1,e,4),epsebdg(e),nxyz)
 
          do m=1,toteq
             do i=1,nxyz
