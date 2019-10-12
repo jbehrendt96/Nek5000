@@ -5,6 +5,10 @@ C> by nek5000
 !          here.
 ! JH081816 went to local_grad. redimensioned gradu. wish I could use
 !          gradm11, but stride
+! JH080719 compute_gradients superceded by compute_gradients_contra
+!          until nek5000 community teaches me the best way of handling
+!          lxd. for now, contravariant metrics are stored in rx,
+!          not in /giso1/. Hence compute_gradients_contra
 !--------------------------------------------------------------------
 
       subroutine compute_gradients(e)
@@ -32,17 +36,17 @@ C> by nek5000
          if (if3d) then
             call local_grad3(ur,us,ut,ud,m0,1,dxm1,dxtm1)
             do i=1,nxyz1
-               gradu(i,eq,1) = jacmi(i,e)*(rxm1(i,1,1,e)*ur(i)+
+               gradu(i,1,eq) = jacmi(i,e)*(rxm1(i,1,1,e)*ur(i)+
      >                                     sxm1(i,1,1,e)*us(i)+
      >                                     txm1(i,1,1,e)*ut(i))
             enddo
             do i=1,nxyz1
-               gradu(i,eq,2) = jacmi(i,e)*(rym1(i,1,1,e)*ur(i)+
+               gradu(i,2,eq) = jacmi(i,e)*(rym1(i,1,1,e)*ur(i)+
      >                                     sym1(i,1,1,e)*us(i)+
      >                                     tym1(i,1,1,e)*ut(i))
             enddo
             do i=1,nxyz1
-               gradu(i,eq,3) = jacmi(i,e)*(rzm1(i,1,1,e)*ur(i)+
+               gradu(i,3,eq) = jacmi(i,e)*(rzm1(i,1,1,e)*ur(i)+
      >                                     szm1(i,1,1,e)*us(i)+
      >                                     tzm1(i,1,1,e)*ut(i))
             enddo
@@ -51,17 +55,71 @@ C> by nek5000
 
             call local_grad2(ur,us   ,ud,m0,1,dxm1,dxtm1)
             do i=1,nxyz1
-               gradu(i,eq,1) = jacmi(i,e)*(rxm1(i,1,1,e)*ur(i)+
+               gradu(i,1,eq) = jacmi(i,e)*(rxm1(i,1,1,e)*ur(i)+
      >                                     sxm1(i,1,1,e)*us(i))
             enddo
             do i=1,nxyz1
-               gradu(i,eq,2) = jacmi(i,e)*(rym1(i,1,1,e)*ur(i)+
+               gradu(i,2,eq) = jacmi(i,e)*(rym1(i,1,1,e)*ur(i)+
      >                                     sym1(i,1,1,e)*us(i))
             enddo
 
          endif
 
       enddo ! equation loop
+
+      return
+      end
+
+!--------------------------------------------------------------------
+! JH080719 compute_gradients_contra computes gradU using
+!          contravariant metrics stored in rx
+!          FIGURE OUT IF GRADU*=JACMI or NOT!!!
+! JH092319 I vote to put *=jacmi here
+!--------------------------------------------------------------------
+      subroutine compute_gradients_contra(e)
+      include 'SIZE'
+      include 'INPUT'
+      include 'DXYZ'
+      include 'GEOM'
+      include 'SOLN'
+      include 'CMTDATA'
+      parameter (ldd=lxd*lyd*lzd)
+      common /ctmp1/ ur(ldd),us(ldd),ut(ldd),ud(ldd),tu(ldd)
+
+      integer eq,e
+
+!     !  Compute d/dx, d/dy and d/dz of all the cons vars
+
+      nxyz1 = lx1*ly1*lz1
+      m0 = lx1-1
+
+      do eq=1,toteq
+         call invcol3(ud,u(1,1,1,eq,e),phig(1,1,1,e),nxyz1)
+
+         if (if3d) then
+            call local_grad3(ur,us,ut,ud,m0,1,dxm1,dxtm1)
+            do j=1,ldim !xyz
+               j0=j+0 ! r_xyz
+               j3=j+3 ! s_xyz
+               j6=j+6 ! t_xyz
+               do i=1,nxyz1
+                  gradu(i,j,eq) = jacmi(i,e)*(rx(i,j0,e)*ur(i)+
+     >                            rx(i,j3,e)*us(i)+
+     >                            rx(i,j6,e)*ut(i))
+               enddo
+            enddo
+         else
+            call local_grad2(ur,us,ud,m0,1,dxm1,dxtm1)
+            do j=1,ldim !xy
+               j0=j+0 ! r_xy
+               j2=j+2 ! s_xy
+               do i=1,nxyz1
+                  gradu(i,j,eq) = jacmi(i,e)*(rx(i,j0,e)*ur(i)+
+     >                            rx(i,j2,e)*us(i))
+               enddo
+            enddo
+         endif
+      enddo
 
       return
       end
@@ -662,6 +720,77 @@ c     Compute divergence^T of ux,uy,uz -- mesh 1 to mesh 1 (vel. to vel.)
      >                       + uxyz(i,2)*rym1(i,1,1,e) )
             us(i) =jacmi(i,e)*(uxyz(i,1)*sxm1(i,1,1,e)
      >                       + uxyz(i,2)*sym1(i,1,1,e) )
+         enddo
+         call local_grad2_t(ud,ur,us,N,1,dxm1,dxtm1,tmp)
+      endif
+      call cmult(ud,csgn,nxyz)
+      call add2(grad,ud,nxyz)
+
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine gradm11_t_contra(grad,uxyz,csgn,e)
+! grad is incremented, not overwritten. Suitable for adding viscous fluxes to
+! a residual.
+! JH091719 gradm11_t with contravariant metrics, which are stored in rx
+!          until we decide whether lxd=lx1 and rx is recycled or lxd=1
+!          and we declare our own arrays for CMT-nek contravariant metrics.
+! JH092319 DO NOT MULTIPLY BY JACMI HERE!!! THIS IS ONLY DONE AT THE END
+!          of compute_rhs_and_dt (linek 246)
+
+      include 'SIZE'
+      include 'DXYZ'
+      include 'GEOM'
+      include 'INPUT'
+
+      parameter (lxyz=lx1*ly1*lz1)
+      real grad(lxyz),uxyz(lxyz,ldim)
+
+      common /ctmp1/ ur(lxyz),us(lxyz),ut(lxyz),ud(lxyz),tmp(lxyz)
+      real ur,us,ut,tmp
+
+      integer e
+
+      nxyz = lx1*ly1*lz1
+      call rzero(ud,nxyz)
+
+      N = lx1-1
+      if (if3d) then
+
+         do i=1,lxyz
+! *=jacmi at end of compute_rhs_and_dt
+!           ur(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
+            ur(i) = (uxyz(i,1)*rx(i,1,e)
+     >                        + uxyz(i,2)*rx(i,2,e)
+     >                        + uxyz(i,3)*rx(i,3,e) )
+         enddo
+         do i=1,lxyz
+! *=jacmi at end of compute_rhs_and_dt
+!           us(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,4,e)
+            us(i) = (uxyz(i,1)*rx(i,4,e)
+     >                        + uxyz(i,2)*rx(i,5,e)
+     >                        + uxyz(i,3)*rx(i,6,e) )
+         enddo
+         do i=1,lxyz
+! *=jacmi at end of compute_rhs_and_dt
+!           ut(i) = jacmi(i,e)*(uxyz(i,1)*rx(i,7,e)
+            ut(i) = (uxyz(i,1)*rx(i,7,e)
+     >                        + uxyz(i,2)*rx(i,8,e)
+     >                        + uxyz(i,3)*rx(i,9,e) )
+         enddo
+         call local_grad3_t(ud,ur,us,ut,N,1,dxm1,dxtm1,tmp)
+      else
+         do i=1,lxyz
+! *=jacmi at end of compute_rhs_and_dt
+!           ur(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,1,e)
+            ur(i) =(uxyz(i,1)*rx(i,1,e)
+     >                       + uxyz(i,2)*rx(i,2,e) )
+! *=jacmi at end of compute_rhs_and_dt
+!           us(i) =jacmi(i,e)*(uxyz(i,1)*rx(i,3,e)
+            us(i) =(uxyz(i,1)*rx(i,3,e)
+     >                       + uxyz(i,2)*rx(i,4,e) )
          enddo
          call local_grad2_t(ud,ur,us,N,1,dxm1,dxtm1,tmp)
       endif

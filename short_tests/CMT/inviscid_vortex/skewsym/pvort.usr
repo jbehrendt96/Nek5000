@@ -1,5 +1,10 @@
       subroutine userchk
       include 'SIZE'
+      return
+      end
+
+      subroutine cmtchk
+      include 'SIZE'
       include 'TOTAL'
       include 'CMTDATA'
       parameter (lt=lx1*ly1*lz1*lelt)

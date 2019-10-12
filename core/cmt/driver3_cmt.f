@@ -1,9 +1,12 @@
+! JH100919
+! Now with some code introduced by Jacob's work on Tait-equation water
+! mixture modeling. Commented out until shocks are working in essplit
 C> @file driver3_cmt.f routines for primitive variables, usr-file interfaces
 C> and properties
 
 C> Compute primitive variables (velocity, thermodynamic state) from 
 C> conserved unknowns U
-      subroutine compute_primitive_vars
+      subroutine compute_primitive_vars(ilim)
       include 'SIZE'
       include 'INPUT'
       include 'PARALLEL'
@@ -15,19 +18,21 @@ C> conserved unknowns U
       parameter (lxyz=lx1*ly1*lz1)
       common /ctmp1/ energy(lx1,ly1,lz1),scr(lx1,ly1,lz1)
       integer e, eq
-      common /posflags/ ifailr,ifaile,ifailt
-      integer ifailr,ifaile,ifailt
+      common /posflags/ ifailr,ifaile,ifailt,ilimflag
+      integer ifailr,ifaile,ifailt,ilimflag
+      integer ilim
 
       nxyz= lx1*ly1*lz1
       ntot=nxyz*nelt
       ifailr=-1
       ifaile=-1
       ifailt=-1
+      ilimflag=ilim
 
       do e=1,nelt
 ! JH020918 long-overdue sanity checks
          dmin=vlmin(u(1,1,1,irg,e),nxyz)
-         if (dmin .lt. 0.0) then
+         if (dmin .lt. 0.0 .and. ilim .ne. 0) then
             ifailr=lglel(e)
             write(6,*) nid,'***NEGATIVE DENSITY***',dmin,lglel(e)
          endif
@@ -55,13 +60,26 @@ C> conserved unknowns U
      >                nxyz)
 ! JH020718 long-overdue sanity checks
          emin=vlmin(energy,nxyz)
-         if (emin .lt. 0.0) then
+         if (emin .lt. 0.0 .and. ilim .ne. 0) then
             ifaile=lglel(e)
-            write(6,*) nid, ' HAS NEGATIVE ENERGY ',emin,lglel(e)
+            write(6,*) stage,nid, ' HAS NEGATIVE ENERGY ',emin,lglel(e)
          endif
+!! JH070219 Tait mixture model mass fractions. just one for now
+!c JB080119 go throug hmultiple species
+!         call invcol3(t(1,1,1,e,2),u(1,1,1,imfrac,e),
+!     >                u(1,1,1,irg,e),
+!     >                nxyz)
+!c        do iscal = 1,NPSCAL
+!c        call invcol3(t(1,1,1,e,1+iscal),u(1,1,1,imfrac+iscal-1,e),
+!c    >                u(1,1,1,irg,e),
+!c    >                nxyz)
+!c        enddo
          call tdstate(e,energy) ! compute state, fill ifailt
       enddo
 
+! Avoid during EBDG testing
+! JH070219 Tait mixture model: man up and test T(:,2) for positivity
+!          someday.
       call poscheck(ifailr,'density    ')
       call poscheck(ifaile,'energy     ')
       call poscheck(ifailt,'temperature')
@@ -84,8 +102,8 @@ c We have perfect gas law. Cvg is stored full field
       integer   e,eg
       real energy(lx1,ly1,lz1)
 
-      common /posflags/ ifailr,ifaile,ifailt
-      integer ifailr,ifaile,ifailt
+      common /posflags/ ifailr,ifaile,ifailt,ilimflag
+      integer ifailr,ifaile,ifailt,ilimflag
 
       eg = lglel(e)
       do k=1,lz1
@@ -96,10 +114,10 @@ c We have perfect gas law. Cvg is stored full field
          e_internal=energy(i,j,k) !cmtasgn should do this, but can't
          call cmt_userEOS(i,j,k,eg)
 ! JH020718 long-overdue sanity checks
-         if (temp .lt. 0.0) then
+         if (temp .lt. 0.0 .and. ilimflag .ne. 0) then
             ifailt=eg
-            write(6,'(i6,a26,3i2,i8,e15.6)') ! might want to be less verbose
-     >      nid,' HAS NEGATIVE TEMPERATURE ', i,j,k,eg,temp
+            write(6,'(i6,a26,e12.4,3i2,i8,3e15.6)') ! might want to be less verbose
+     >      nid,' HAS NEGATIVE TEMPERATURE ', x,i,j,k,eg,temp,rho,pres
          endif
          vtrans(i,j,k,e,jen)= e_internal
          vtrans(i,j,k,e,jcv)= cv*rho
@@ -160,12 +178,13 @@ c-----------------------------------------------------------------------
       ntotv=nelv*nxyz1
       ltott=lelt*nxyz1
       ntotcv=lelt*nxyz1*toteq
-      call rzero(phig,ltott)
+      call rone(phig,ltott)
       call rzero(csound,ltott)
       call rzero(vtrans,ltott*ldimt1)
       call rzero(vdiff ,ltott*ldimt1)
       call rzero(u,ntotcv)
-      call usr_particles_init
+! JH100919 where does particle stuff live these days?
+!     call usr_particles_init
       call cmtuic
       if(ifrestart) call my_full_restart !  Check restart files. soon...
 
@@ -228,6 +247,9 @@ c     ! save velocity on fine mesh for dealiasing
 
       subroutine cmtuic
 ! overlaps with setics. -DCMT will require IFDG as well
+! need to make sure setics has no effect.
+! JH070219 cmtuic now sets U and U alone. EVERYTHING else should come
+!          from compute_primitive_variables
       include 'SIZE'
       include 'SOLN'
       include 'PARALLEL'
@@ -242,24 +264,19 @@ c     ! save velocity on fine mesh for dealiasing
             call nekasgn (i,j,k,e)
             call cmtasgn (i,j,k,e)
             call useric  (i,j,k,eg)
-            vx(i,j,k,e) = ux
-            vy(i,j,k,e) = uy
-            vz(i,j,k,e) = uz
-            vtrans(i,j,k,e,jrho)  = rho
-            vtrans(i,j,k,e,jcv)= rho*cv
-            vtrans(i,j,k,e,jcp)= rho*cp
-            vtrans(i,j,k,e,jen)= e_internal
-            phig(i,j,k,e)  = phi
-            pr(i,j,k,e)    = pres
+            phig(i,j,k,e)  = phi ! only sane way to run CMT-nek without
+                                 ! particles is to have useric set phi=1
             u(i,j,k,irg,e) = phi*rho
             u(i,j,k,irpu,e)= phi*rho*ux
             u(i,j,k,irpv,e)= phi*rho*uy
             u(i,j,k,irpw,e)= phi*rho*uz
             u(i,j,k,iret,e)=phi*rho*(e_internal+0.5*(ux**2+uy**2+uz**2))
-            vdiff(i,j,k,e,jmu) = mu
-            vdiff(i,j,k,e,jknd)= udiff
-            vdiff(i,j,k,e,jlam)= lambda
-            t(i,j,k,e,1) = temp
+!            u(i,j,k,imfrac,e)=phi*rho*ps(1)
+!c JB080119 multiple species
+!               t(i,j,k,e,2) = ps(l)
+!c           do l = 2,NPSCAL
+!c               t(i,j,k,e,l) = ps(l-1)
+!c           enddo
          enddo
          enddo
          enddo
@@ -271,6 +288,8 @@ c     ! save velocity on fine mesh for dealiasing
 
       subroutine poscheck(ifail,what)
       include 'SIZE'
+      include 'SOLN'
+      include 'CMTDATA'
       include 'PARALLEL'
       include 'INPUT'
 !JH020918 handles reporting, I/O and exit from failed positivity checks
@@ -283,7 +302,8 @@ c     ! save velocity on fine mesh for dealiasing
      >   write(6,*) 'dumping solution after negative ',what,'@ eg=',
      >             ifail0
          ifxyo=.true.
-         call out_fld_nek
+!        call out_fld_nek
+         call outpost2(vx,vy,vz,pr,t,ldimt,'EBL')
          call exitt
       endif
 

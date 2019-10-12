@@ -3,6 +3,10 @@ C> \var U(lxyz,5,lelt) contains nodal values of the five conserved unknowns at
 C> each of lx1*ly1*lz1 grid points for all elements
       include 'CMTSIZE' ! new for 2019. usr/case-level declarations that
                         ! depend on flux. all for CMTSURFLX for now
+
+! jface contains free-stream-preserving computation of area PRE-DIVIDED by
+! the endpoint quadrature weight!!! This ensures surface fluxes and volume
+! fluxe functions can be added directly together at face points
       real                 u(lx1,ly1,lz1,toteq,lelt)
      >                    ,jface(lx1,lz1,2*ldim,lelt)
       common /solnconsvar/ u,jface 
@@ -22,7 +26,7 @@ C> each of lx1*ly1*lz1 grid points for all elements
      $   , res3(lx1,ly1,lz1,toteq,lelt) 
       common /cmtres/ res1, res2, res3
       
-      real              gradu(lx1*ly1*lz1,toteq,3)
+      real              gradu(lx1*ly1*lz1,3,toteq)
       common /cmtgradu/ gradu     
 
 ! JH060418 redimensioned these arrays to interchange equation loop.
@@ -38,9 +42,9 @@ C> each of lx1*ly1*lz1 grid points for all elements
       common /forcedata/ usrf 
 
       real c_sub_e,c_max,meshh(lelt),maxdiff,gridh(lx1*ly1*lz1,lelt),
-     $     nu_s,rhomax(lelt),maxres(lelt)
+     >    nu_s,rhomax(lelt),epsebdg(lelt),maxres(lelt),se0(lelt)
       common /planned_Additions/ c_sub_e,c_max,meshh,maxdiff,
-     $        gridh,nu_s,rhomax,maxres
+     $        gridh,nu_s,rhomax,epsebdg,maxres,se0
 
 c We assume we will be working with one gas. Therefore Rgas need not be 
 c full filed. To begin with we assume calorically perfect gas.
@@ -61,7 +65,7 @@ c---------------------------------------------------------------------
      $    MWref,CWref,MCref,CCref,
      $    AAref,
      $    BBref,R1ref,R2ref,OMref,
-     $    AA,BB,OM,CC,CW
+     $    AA,BB,OM,CC,CW,se0const
 
       common /cmtgasref/cpgref,cvgref,cvjref,gmaref,rgasref,molmass,
      $    MAref,MBref,CAref,CBref,   ! NTN for mixed model
@@ -69,7 +73,7 @@ c---------------------------------------------------------------------
      $    MWref,CWref,MCref,CCref,
      $    AAref,
      $    BBref,R1ref,R2ref,OMref,
-     $    AA,BB,OM,CC,CW
+     $    AA,BB,OM,CC,CW,se0const
 
       integer              stage,nstage
       common /tstepstage/ stage,nstage

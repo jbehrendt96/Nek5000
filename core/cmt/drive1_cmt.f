@@ -41,7 +41,8 @@ c     Solve the Euler equations
          call cmtchk ! need more ifdefs
          call compute_mesh_h(meshh,xm1,ym1,zm1)
          call compute_grid_h(gridh,xm1,ym1,zm1)
-         call compute_primitive_vars ! get good mu
+         call compute_primitive_vars(1) ! get good mu
+         call limiter
          call entropy_viscosity      ! for high diffno
          call compute_transport_props! at t=0
 
@@ -75,8 +76,20 @@ c compute_rhs_dt for the 5 conserved variables
      >                         tcoef(3,stage)*res1(i,1,1,e,eq)
             enddo
             enddo
-         enddo
-      enddo
+         enddo ! nelt
+!-----------------------------------------------------------------------
+! JH080918 Now with solution limiters of Zhang & Shu (2010)
+!                                    and   Lv & Ihme (2015) 
+!          Also, FINALLY rewritten to consider solution at the
+!          END OF RK STAGES AND END OF TIME STEP AS THE SOLUTION OF INTEREST
+! JH081018 OK I can't do that for some reason. CHECK SOLN COMMONS BETWEEN
+!          cmt_nek_advance and istep=istep+1
+!-----------------------------------------------------------------------
+!        call compute_primitive_vars(0)
+!        call limiter
+!        call compute_primitive_vars(1)
+
+      enddo ! RK stage loop
 
       ftime = ftime + dnekclock() - ftime_dum
 
@@ -97,8 +110,8 @@ C> Store it in res1
       include 'CMTDATA'
       include 'CTIMER'
 
-! not sure if viscous surface fluxes can live here yet
-      common /CMTSURFLX/ flux(heresize),graduf(hdsize)
+! hdsize needs to be big enough for 15 full fields
+      common /CMTSURFLX/ fatface(heresize),graduf(hdsize)
       real graduf
 
       integer e,eq
@@ -117,23 +130,35 @@ C> Store it in res1
 !     if(IFFLTR)  call filter_cmtvar(IFCNTFILT)
 !        primitive vars = rho, u, v, w, p, T, phi_g
 
-      call compute_primitive_vars
+      call compute_primitive_vars(0)
+!! JH090518 Shock detector is not ready for prime time. Lean on EVM for
+!!          sane default 
+!!     if (stage.eq.1)
+!!    >call shock_detector(t(1,1,1,1,5),vtrans(1,1,1,1,jrho),scrent)
+      call limiter
+      call compute_primitive_vars(1)
 
 !-----------------------------------------------------------------------
 ! JH072914 We can really only proceed with dt once we have current
 !          primitive variables. Only then can we compute CFL and/or dt.
 !-----------------------------------------------------------------------
       if(stage.eq.1) then
+         call setdtcmt
+         call set_tstep_coef
 !-----------------------------------------------------------------------
 ! JH081018 a whole bunch of this stuff should really be done AFTER the
 !          RK loop at the END of the time step, but I lose custody
 !          of commons in SOLN between cmt_nek_advance and the rest of
 !          the time loop.
-         call copy(t(1,1,1,1,2),vtrans(1,1,1,1,irho),nxyz*nelt)
+         call copy(t(1,1,1,1,2),vtrans(1,1,1,1,jrho),nxyz*nelt)
+!! JH070119 Tait mixture model extension. Need T(:,2) for mass fraction
+!!          of one of the two species. put mixture density (for
+!!          post-processing only) into T(:,4)           
+!c JB080119 more species change mix density, T(:,5) for 3 species
+!         call copy(t(1,1,1,1,4),vtrans(1,1,1,1,jrho),nxyz*nelt)
+!c        call copy(t(1,1,1,1,5),vtrans(1,1,1,1,jrho),nxyz*nelt)
          call cmtchk
 
-!        if (mod(istep,iostep2).eq.0) then
-!        if (mod(istep,iostep2).eq.0.or.istep.eq.1)then
          if (mod(istep,iostep).eq.0.or.istep.eq.1)then ! migrate to iostep2
             call out_fld_nek ! solution checkpoint for restart
 ! T2 S1 rho
@@ -146,8 +171,6 @@ C> Store it in res1
             call lpm_usr_particles_io(istep)
 #endif
          end if
-         call setdtcmt
-         call set_tstep_coef
       endif
 
       call entropy_viscosity ! accessed through uservp. computes
@@ -156,8 +179,7 @@ C> Store it in res1
 
       ntot = lx1*ly1*lz1*lelt*toteq
       call rzero(res1,ntot)
-      call rzero(flux,heresize)
-!     call rzero(graduf,hdsize) ! now has new face jacobian
+      call rzero(fatface,heresize)
 
 !     !Total_eqs = 5 (we will set this up so that it can be a user 
 !     !defined value. 5 will be its default value)
@@ -185,45 +207,16 @@ C> res1+=\f$\oint \mathbf{H}^{c\ast}\cdot\mathbf{n}dA\f$ on face points
                    ! W+ depends on flux function and may not always be 1
       do eq=1,toteq
          ieq=(eq-1)*ndg_face+iflx
-         call surface_integral_full(res1(1,1,1,1,eq),flux(ieq))
+         call surface_integral_full(res1(1,1,1,1,eq),fatface(ieq))
       enddo
       dumchars='after_inviscid'
 !     call dumpresidue(dumchars,999)
 
-               !                   -
-      iuj=iflx ! overwritten with U -{{U}}
-!-----------------------------------------------------------------------
-!                          /     1  T \
-! JH082316 imqqtu computes | I - -QQ  | U for all 5 conserved variables
-!                          \     2    /
-! which I now make the following be'neon-billboarded assumption:
-!***********************************************************************
-! ASSUME CONSERVED VARS U1 THROUGH U5 ARE CONTIGUOUSLY STORED
-! SEQUENTIALLY IN /CMTSURFLX/ i.e. that ju2=ju1+1, etc.
-! CMTDATA BETTA REFLECT THIS!!!
-!***********************************************************************
-C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}^{\intercal}\nabla v\}\} \cdot \left[\mathbf{U}\right] dA\f$
-      if (1 .eq. 2) then
-! JH070918 conserved variables done here.
-      i_cvars=(ju1-1)*nfq+1
-      do eq=1,toteq
-         call faceu(eq,fatface(i_cvars))
-! JH080317 at least get the product rule right until we figure out how
-!          we want the governing equations to look
-         call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
-         i_cvars=i_cvars+nfq
-      enddo
-      ium=(ju1-1)*nfq+iwm
-      iup=(ju1-1)*nfq+iwp
-      call   imqqtu(flux(iuj),flux(ium),flux(iup))
-      call   imqqtu_dirichlet(flux(iuj),flux(iwm),flux(iwp))
-      call igtu_cmt(flux(iwm),flux(iuj),graduf) ! [[u]].{{gradv}}
-      dumchars='after_igtu'
-!     call dumpresidue(dumchars,999)
-      endif
+!     call gtu_wrapper(fatface) ! for penalty methods. not yet
 
-C> res1+=\f$\int \left(\nabla v\right) \cdot \left(\mathbf{H}^c+\mathbf{H}^d\right)dV\f$ 
-C> for each equation (inner), one element at a time (outer)
+! JH091319 overwrite wminus with -[[U]] for viscous terms BR1
+      call fillujumpu
+
       do e=1,nelt
 !-----------------------------------------------------------------------
 ! JH082216 Since the dawn of CMT-nek we have called this particular loop
@@ -240,14 +233,19 @@ C> for each equation (inner), one element at a time (outer)
 !-----------------------------------------------------------------------
 ! Get user defined forcing from userf defined in usr file
          call cmtusrf(e)
-         call compute_gradients(e) ! gradU
+         call compute_gradients_contra(e) ! gradU
+         i_cvars=1
+         do eq=1,toteq
+            call br1auxflux(e,gradu(1,1,eq),fatface(i_cvars)) ! SEE HEAT.USR
+            i_cvars=i_cvars+nfq
+         enddo
          call convective_cmt(e)        ! convh & totalh -> res1
          do eq=1,toteq
-            if (1.eq.2) then
-               call    viscous_cmt(e,eq) ! diffh -> half_iku_cmt -> res1
+            call    viscous_cmt(e,eq) ! diffh -> half_iku_cmt -> res1
                                              !       |
                                              !       -> diffh2graduf
 ! Compute the forcing term in each of the 5 eqs
+            if (1.eq.2) then
                call compute_forcing(e,eq)
             endif
          enddo
@@ -255,15 +253,15 @@ C> for each equation (inner), one element at a time (outer)
       dumchars='after_elm'
 !     call dumpresidue(dumchars,999)
 
+! COMPARE TO HEAT.USR. IGU should be the same
 C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}\nabla \mathbf{U}\}\} \cdot \left[v\right] dA\f$
-      if (1.eq.2) then
-      call igu_cmt(flux(iwp),graduf,flux(iwm))
+!     call igu_cmt(flux(iwp),graduf,flux(iwm))
+      call br1primary(fatface(iwm),graduf)
       do eq=1,toteq
-         ieq=(eq-1)*ndg_face+iwp
+         ieq=(eq-1)*ndg_face+iwm
 !Finally add viscous surface flux functions of derivatives to res1.
-         call surface_integral_full(res1(1,1,1,1,eq),flux(ieq))
+         call surface_integral_full(res1(1,1,1,1,eq),fatface(ieq))
       enddo
-      endif
 
 ! one last
       do eq=1,toteq

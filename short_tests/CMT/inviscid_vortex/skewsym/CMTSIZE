@@ -33,4 +33,4 @@
       integer lfq,heresize,hdsize
       parameter (lfq=lx1*lz1*2*ldim*lelt,
      >                   heresize=(nqq+1+toteq)*lfq,
-     >                   hdsize=toteq*3*lfq) ! might not need ldim
+     >                   hdsize=toteq*15*lfq)

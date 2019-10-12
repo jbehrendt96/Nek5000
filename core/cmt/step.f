@@ -73,12 +73,14 @@ C> @file step.f time stepping and mesh spacing routines
 
 !     call mindr(mdr,diffno2)
       call glinvcol2max(diffno1,vdiff(1,1,1,1,jmu), gridh,ntot,dt_cmt)
-      call glinvcol2max(diffno2,vdiff(1,1,1,1,jknd),gridh,ntot,dt_cmt)
-      call glinvcol2max(diffno3,vdiff(1,1,1,1,jnus),gridh,ntot,dt_cmt)
+      call glinvcol2max(diffno2,vdiff(1,1,1,1,jlam),gridh,ntot,dt_cmt)
+      call glinvcol2max(diffno3,vdiff(1,1,1,1,jknd),gridh,ntot,dt_cmt)
+      call glinvcol2max(diffno4,vdiff(1,1,1,1,jnus),gridh,ntot,dt_cmt)
 !     diffno=max(diffno1,diffno2,diffno3)
+      diffno1=max(diffno1,diffno2)
       time_cmt=time_cmt+dt_cmt
       if (nio.eq.0) WRITE(6,100)ISTEP,TIME_CMT,DT_CMT,COURNO,
-     >   diffno1,diffno2,diffno3
+     >   diffno1,diffno3,diffno4
  100  FORMAT('CMT ',I7,', t=',1pE14.7,', DT=',1pE14.7
      $,', C=',1pE12.5,', Dmu,knd,art=',3(1pE11.4))
 

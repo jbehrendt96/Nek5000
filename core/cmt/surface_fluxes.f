@@ -1,4 +1,52 @@
 C> @file surface_fluxes.f Routines for surface terms on RHS.
+C> \ingroup isurf
+C> @{
+C> overwrite beginning of /CMTSURFLX/ with -[[U]] for viscous terms
+      subroutine fillujumpu
+!-----------------------------------------------------------------------
+! JH091319 Yes, I know things like llf_euler already did this, but
+!          1.) I decided not to dedicate memory to [[U]] in addition
+!              to primitive variables and
+!          2.) It isn't very modular to store [[U]] from split forms
+!              that need LLF. We would still need to do this again for
+!              entropy-stable fluxes!
+! JH092319 Dirichlet BC for viscous fluxes go here
+!-----------------------------------------------------------------------
+      include 'SIZE'
+      include 'DG'
+      include 'SOLN'
+      include 'CMTDATA'
+      include 'INPUT'
+
+! JH070219 "heresize" and "hdsize" come from a failed attempt at managing
+!          memory in CMTSURFLX by redeclaration that was abandoned before
+!          the two-point split form. They need to be taken care of in
+!          CMTSIZE and consistent with the desired subroutine
+      common /CMTSURFLX/ fatface(heresize),uplus(hdsize)
+      real fatface,uplus
+      integer eq
+      character*32 cname
+
+      nfq=lx1*lz1*2*ldim*nelt
+      nstate = toteq
+! where different things live
+      iwm =1
+      iwp =iwm+nstate*nfq  ! duplicate one conserved variable at a time for jumps in LLF
+                               ! tuck it before jph=nqq
+!     i_cvars=(ju1-1)*nfq+1
+      i_cvars=1
+      do eq=1,toteq
+         call faceu(eq,fatface(i_cvars))
+! JH091319 still need to do something about phi; does jph=nqq still?
+!        call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
+         i_cvars=i_cvars+nfq
+      enddo
+      call face_state_commo(fatface(iwm),uplus,nfq,nstate,dg_hndl)
+      call sub3(fatface(iwm),uplus,fatface(iwm),nstate*nfq)
+
+C> @}
+      return
+      end
 
 C> \ingroup isurf
 C> @{
@@ -434,7 +482,8 @@ C> @}
 
       subroutine diffh2graduf(e,eq,graduf)
 ! peels off diffusiveH into contiguous face storage via restriction operator R
-! for now, stores {{gradU}} for igu
+! for now, stores gradU.n for QQT in igu. ONLY 5 FLUXES, for {{AgradU.n}}
+! 
       include  'SIZE'
       include  'DG' ! iface
       include  'CMTDATA'
@@ -462,6 +511,41 @@ C> @}
          call addcol3(graduf(1,e,eq),hface,normal,nxzf)
       enddo
       call col2(graduf(1,e,eq),area(1,1,1,e),nxzf)
+
+      return
+      end
+
+!-------------------------------------------------------------------------------
+
+      subroutine diffh2face(e,eq,diffhf)
+! peels off diffusiveH into contiguous face storage via restriction operator R
+! for final central flux in BR1. ALL 15 FLUXES, for {{AgradU}}.n
+      include  'SIZE'
+      include  'DG' ! iface
+      include  'CMTDATA'
+      include  'GEOM'
+      integer e,eq
+! must not exceed hdsize
+! faster dot product {{Hd}}.n
+      real diffhf(lx1*lz1*2*ldim,nelt,ldim,toteq)
+! vs allowing diffhf(:,:,:,1) to overwrite [[U]]
+!     real diffhf(lx1*lz1*2*ldim,nelt,toteq,ldim)
+      common /scrns/ hface(lx1*lz1,2*ldim)
+     >              ,normal(lx1*ly1,2*ldim)
+      real hface, normal
+
+      integer f
+
+      nf    = lx1*lz1*2*ldim*nelt
+      nfaces=2*ldim
+      nxz   =lx1*lz1
+      nxzf  =nxz*nfaces
+      nxyz  = lx1*ly1*lz1
+
+      do j =1,ldim
+         call full2face_cmt(1,lx1,ly1,lz1,iface_flux,hface,diffh(1,j)) 
+         call copy(diffhf(1,e,j,eq),hface,nxzf)
+      enddo
 
       return
       end
@@ -549,6 +633,144 @@ C> @}
          enddo
       enddo
 
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine br1primary(flux,gdudxk)
+! Hij^{d*}=JA{{Hij_d}}.n
+      include 'SIZE'
+      include 'CMTDATA'
+      include 'DG'
+
+      real flux(lx1*lz1*2*ldim*nelt,toteq)
+!     real gdudxk(lx1*lz1*2*ldim,nelt,toteq)
+      real gdudxk(lx1*lz1*2*ldim*nelt,ldim,toteq)
+      real const
+      integer e,eq,f
+
+      nxz = lx1*lz1
+      nfaces=2*ldim
+      nxzf=nxz*nfaces
+      nfq =lx1*lz1*nfaces*nelt
+      ntot=nfq*toteq
+
+      const = 0.5
+      call cmult(gdudxk,const,ntot*ldim)
+!-----------------------------------------------------------------------
+! supa huge gs_op to get {{AgradU}}
+! operation flag is second-to-last arg, an integer
+!                                                   1 ==> +
+      call fgslib_gs_op_fields(dg_hndl,gdudxk,nfq,toteq*ldim,1,1,0)
+      do eq=1,toteq ! {{AgradU}}.n
+         call agradu_normal_flux(flux(1,eq),gdudxk(1,1,eq))
+      enddo
+      call br1bc(flux)
+      call chsign(flux,ntot) ! needs to change with sign changes
+
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine agradu_normal_flux(flux,graduf)
+! JA{{AgradU}}.n
+      include  'SIZE'
+      include 'INPUT'
+      include  'CMTDATA'
+      include  'GEOM'
+      integer e
+      integer f
+      real graduf(lx1*lz1*2*ldim,nelt,ldim)
+      real flux(lx1*lz1*2*ldim,nelt)
+      common /SCRNS/ jscr(lfq)
+      real jscr
+
+      nfaces=2*ldim
+      nxz=lx1*lz1
+      nxzf  =nxz*nfaces
+      nf=nxzf*nelt
+
+! I don't know what to do with volume fraction phi, and this is my first guess
+!     call col3(jscr,jface,z(1,jph),nf) ! Jscr=JA*{{\phi_g}}
+! GET phi in HERE SOMEDAY SOON
+      call copy(jscr,jface,nf)
+! zero out jscr at boundary faces; gs_op is degenerate there.
+!     call bcmask_cmt(jscr) ! RECONCILE THIS WITH br1bc!!!
+
+      nxyz  = lx1*ly1*lz1
+
+      do e =1,nelt
+         call col3(flux(1,e),graduf(1,e,1),unx(1,1,1,e),nxzf)
+      enddo
+      do e =1,nelt
+         call addcol3(flux(1,e),graduf(1,e,2),uny(1,1,1,e),nxzf)
+      enddo
+      if (if3d) then
+         do e =1,nelt
+            call addcol3(flux(1,e),graduf(1,e,3),unz(1,1,1,e),nxzf)
+         enddo
+      endif
+      call col2(flux,jscr,nf)
+
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine br1bc(flux)
+!-----------------------------------------------------------------------
+! Two boundary condition operations remain even for artificial viscosity
+! 1. (AgradU)- on Dirichlet boundaries has been multiplied by 1/2, but
+! needs to be doubled because gs_op has added zeros to 1/2(AgradU)
+! 2. (Fbc.n)- on Neumann boundaries via bcflux_br1
+      include 'SIZE'
+      include 'CMTSIZE'
+      include 'TOTAL'
+      integer e,eq,f
+      real flux(lx1*lz1,2*ldim,nelt,toteq)
+      character*3 cb2
+
+      nxz=lx1*lz1
+      nfaces=2*ldim
+
+      ifield=1
+      do e=1,nelt
+         do f=1,nfaces
+            cb2=cbc(f, e, ifield)
+            if (cb2.ne.'E  '.and.cb2.ne.'P  ') then ! cbc bndy.
+! all Dirichlet conditions result in {{}} being
+! UNDER THE ASSUMPTIONS THAT
+! 1. agradu's actual argument is really gdudxk AND
+! 2. IT HAS ALREADY BEEN MULTIPLIED BY 0.5
+! 3. gs_op has not changed it at all.
+! overwriting flux with agradu and and multiplying it 2.0 should do the trick
+               do eq=1,toteq
+! JH092719 already dotted with normal. so just multiply by 2
+                   call cmult(flux(1,f,e,eq),2.0,nxz)
+               enddo
+               call bcflux_br1(flux,f,e)
+            endif
+         enddo
+      enddo
+
+      return
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine bcflux_br1(flux,f,e)
+! JH092719. Placeholder for Neumann conditions in an actual Navier-Stokes
+!           solver. For artificial viscosity, we want zero viscous fluxes
+!           at all boundaries.
+      include 'SIZE'
+      include 'CMTSIZE'
+      integer f,e
+      integer eq
+      real flux(lx1*lz1,2*ldim,nelt,toteq)
+      logical ifadiabatic
+      data ifadiabatic /.false./ 
       return
       end
 
@@ -859,4 +1081,45 @@ C> @}
       enddo
       enddo
 
+      end
+
+!-----------------------------------------------------------------------
+
+      subroutine gtu_wrapper(fatface)
+      include 'SIZE'
+      real fatface(*)
+      integer eq
+               !                   -
+      iuj=iflx ! overwritten with U -{{U}}
+!-----------------------------------------------------------------------
+!                          /     1  T \
+! JH082316 imqqtu computes | I - -QQ  | U for all 5 conserved variables
+!                          \     2    /
+! which I now make the following be'neon-billboarded assumption:
+!***********************************************************************
+! ASSUME CONSERVED VARS U1 THROUGH U5 ARE CONTIGUOUSLY STORED
+! SEQUENTIALLY IN /CMTSURFLX/ i.e. that ju2=ju1+1, etc.
+! CMTDATA BETTA REFLECT THIS!!!
+!***********************************************************************
+C> res1+=\f$\int_{\Gamma} \{\{\mathbf{A}^{\intercal}\nabla v\}\} \cdot \left[\mathbf{U}\right] dA\f$
+! JH070918 conserved variables done here.
+      i_cvars=(ju1-1)*nfq+1
+      do eq=1,toteq
+         call faceu(eq,fatface(i_cvars))
+! JH080317 at least get the product rule right until we figure out how
+!          we want the governing equations to look
+         call invcol2(fatface(i_cvars),fatface(iwm+nfq*(jph-1)),nfq)
+         i_cvars=i_cvars+nfq
+      enddo
+      ium=(ju1-1)*nfq+iwm
+      iup=(ju1-1)*nfq+iwp
+      call   imqqtu(fatface(iuj),fatface(ium),fatface(iup))
+      call   imqqtu_dirichlet(fatface(iuj),fatface(iwm),fatface(iwp))
+
+      if (1 .eq. 2) then
+      call igtu_cmt(fatface(iwm),fatface(iuj),graduf) ! [[u]].{{gradv}}
+C> res1+=\f$\int \left(\nabla v\right) \cdot \left(\mathbf{H}^c+\mathbf{H}^d\right)dV\f$ 
+C> for each equation (inner), one element at a time (outer)
+      endif
+      return
       end
