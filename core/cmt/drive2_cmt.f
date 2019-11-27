@@ -120,6 +120,32 @@ c------------------------------------------------------------------------
          call cfill(t(1,1,1,e,4),theta,nxyz)
 !        rho=vlsc2(bm1(1,1,1,e),u(1,1,1,1,e),nxyz)/volel(e)
 
+!JB102119
+! positivity-preserving limiter Wang and Zhang: species
+! Robust high order DG schemes for 2D gaseous detonations 3.3
+
+c        spec = vlsc2(bm1(1,1,1,e),u(1,1,1,6,e),nxyz)/volel(e)
+c        theta = min(abs(spec/(spec-u(1,1,1,6,e))),1.0)
+
+c        if (spec .lt. 0.0) then
+c           write(6,'(a33,2i5,1p3e15.7)')
+c    >   'spec<epslon,nid,e,spec,theta',nid,e,spec,theta,u(i,1,1,6,e)
+            do i=1,nxyz
+               uold=u(i,1,1,6,e)
+               if(uold .lt. 0.0.and. uold .ge. -1.0e-10) then
+c              u(i,1,1,6,e)=spec+theta*(uold-spec)
+               u(i,1,1,6,e) = 0.0
+c           write(6,'(a33,2i5,1p3e15.7)')
+c    >   'spec<epslon,nid,e,spec,theta',nid,e,spec,theta,u(i,1,1,6,e)
+              endif
+            enddo
+c        else
+c           do i=1,nxyz
+c              uold=u(i,1,1,6,e)
+c              u(i,1,1,6,e)=spec+abs(theta)*(uold-spec)
+c           enddo
+c        endif
+
 ! positivity-preserving limiter of Lv & Ihme: internal energy
 ! first compute kinetic energy density
          if (if3d) then
@@ -171,6 +197,22 @@ c------------------------------------------------------------------------
             do i=1,nxyz
                uold=u(i,1,1,m,e)
                u(i,1,1,m,e)=uold+epsebdg(e)*(avstate(m)-uold)
+! Fred - Testing energy floor here...crossing fingers 8/26/19
+               if (m==5 .and.  rhoeavg .lt. 0.0
+     >             .and. u(i,1,1,1,e) .gt. 0.0) then !Neg int energy
+                 if(if3D) then
+                        term1 = u(i,1,1,2,e)/u(i,1,1,1,e)
+                        term2 = u(i,1,1,3,e)/u(i,1,1,1,e)
+                        term3 = u(i,1,1,4,e)/u(i,1,1,1,e)
+                        u(i,1,1,m,e) = u(i,1,1,1,e)*
+     >                  (1.0e-5+0.5*(term1**2+term2**2+term3**2))
+                 else
+                        term1 = u(i,1,1,2,e)/u(i,1,1,1,e)
+                        term2 = u(i,1,1,3,e)/u(i,1,1,1,e)
+                        u(i,1,1,m,e) = u(i,1,1,1,e)*
+     >                  (1.0e-5+0.5*(term1**2+term2**2))
+                  endif
+               endif
             enddo
          enddo
 
