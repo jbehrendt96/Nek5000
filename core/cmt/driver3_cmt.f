@@ -59,10 +59,23 @@ C> conserved unknowns U
          emin=vlmin(energy,nxyz)
          if (emin .lt. 0.0 .and. ilim .ne. 0) then
             ifaile=lglel(e)
+c Fred floor
+                 if(if3D) then
+                        term1 = u(i,1,1,2,e)/u(i,1,1,1,e)
+                        term2 = u(i,1,1,3,e)/u(i,1,1,1,e)
+                        term3 = u(i,1,1,4,e)/u(i,1,1,1,e)
+                        u(i,1,1,m,e) = u(i,1,1,1,e)*
+     >                  (1.0e-5+0.5*(term1**2+term2**2+term3**2))
+                 else
+                        term1 = u(i,1,1,2,e)/u(i,1,1,1,e)
+                        term2 = u(i,1,1,3,e)/u(i,1,1,1,e)
+                        u(i,1,1,5,e) = u(i,1,1,1,e)*
+     >                  (1.0e-5+0.5*(term1**2+term2**2))
+                  endif
             write(6,*) stage,nid, ' HAS NEGATIVE ENERGY ',emin,lglel(e)
          endif
 ! JH070219 Tait mixture model mass fractions. just one for now
-c JB080119 go throug hmultiple species
+c JB080119 go through multiple species
          call invcol3(t(1,1,1,e,2),u(1,1,1,imfrac,e),
      >                u(1,1,1,irg,e),
      >                nxyz)
