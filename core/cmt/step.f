@@ -119,7 +119,7 @@ C> @file step.f time stepping and mesh spacing routines
      >   diffno1,diffno2,diffno3,diffno4
  100  FORMAT('CMT ',I7,', t=',1pE14.7,', DT=',1pE14.7
      $,', C=',1pE12.5,', Dmu,knd,art,lam=',4(1pE11.4))
-     $,', C=',1pE12.5,', Dmu,knd,art,lam=',4(1pE11.4))
+
 
       return
       end
