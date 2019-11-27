@@ -54,7 +54,8 @@ c     Solve the Euler equations
 !! JH082718 mask viscosity in t(:,3)
 !!        call col2(t(1,1,1,1,3),t(1,1,1,1,5),nxyz*nelt)
 !!        call max_to_trilin(t(1,1,1,1,3))
-         call entropy_viscosity         ! for high diffno
+!         call entropy_viscosity         ! for high diffno
+         call semi_cook_viscosity                ! for high diffno
 !        call piecewiseAV(AVeverywhere)
          call compute_transport_props   ! at t=0
 
@@ -197,7 +198,8 @@ C> Store it in res1
 
 !     if (1==2) then
 !     call piecewiseAV(shock_detector)
-      call entropy_viscosity
+!     call entropy_viscosity
+      call semi_cook_viscosity
       call compute_transport_props ! everything inside rk stage
 !     endif
 !     call smoothing(vdiff(1,1,1,1,imu)) ! still done in usr file
@@ -219,7 +221,17 @@ c        call copy(t(1,1,1,1,5),vtrans(1,1,1,1,irho),nxyz*nelt)
          call cmtchk
 
 !        if (mod(istep,iostep2).eq.0) then
-         if (mod(istep,iostep2).eq.0.or.istep.eq.1)then
+c       if (mod(istep,iostep2).eq.0.or.istep.eq.1)then !added JB navy19
+!BAD Jul022019 Changed the time dump to make sure we don't divide by zero
+!if user wants physical time step.
+!Added check for physical time dump
+         if (iostep2 .gt. 0) then
+                if (mod(istep,iostep2).eq.0) dumped_stage = .TRUE. 
+         else
+                if (time.ge.time_iotarg) dumped_stage = .TRUE.
+         endif        
+
+         if (dumped_stage.eq..TRUE..or.istep.eq.1)then
 !        if (mod(istep,iostep).eq.0.or.istep.eq.1)then
             call out_fld_nek ! solution checkpoint for restart
 ! T2 S1 rho

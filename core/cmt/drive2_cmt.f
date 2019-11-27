@@ -132,7 +132,7 @@ c           write(6,'(a33,2i5,1p3e15.7)')
 c    >   'spec<epslon,nid,e,spec,theta',nid,e,spec,theta,u(i,1,1,6,e)
             do i=1,nxyz
                uold=u(i,1,1,6,e)
-               if(uold .lt. 0.0.and. uold .ge. -1.0e-10) then
+               if(uold .lt. 0.0 .and. uold .ge. -1.0e-10) then
 c              u(i,1,1,6,e)=spec+theta*(uold-spec)
                u(i,1,1,6,e) = 0.0
 c           write(6,'(a33,2i5,1p3e15.7)')
@@ -205,12 +205,12 @@ c        endif
                         term2 = u(i,1,1,3,e)/u(i,1,1,1,e)
                         term3 = u(i,1,1,4,e)/u(i,1,1,1,e)
                         u(i,1,1,m,e) = u(i,1,1,1,e)*
-     >                  (1.0e-5+0.5*(term1**2+term2**2+term3**2))
+     >                  (5.0e-3+0.5*(term1**2+term2**2+term3**2))
                  else
                         term1 = u(i,1,1,2,e)/u(i,1,1,1,e)
                         term2 = u(i,1,1,3,e)/u(i,1,1,1,e)
                         u(i,1,1,m,e) = u(i,1,1,1,e)*
-     >                  (1.0e-5+0.5*(term1**2+term2**2))
+     >                  (5.0e-3+0.5*(term1**2+term2**2))
                   endif
                endif
             enddo
