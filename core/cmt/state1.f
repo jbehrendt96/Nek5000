@@ -434,7 +434,7 @@ c added in formulas for speed of sound using tait and pure jwl
       real MixtTait_SO
       real B,gma,rho0,rho
       MixtTait_SO=SQRT(B*gma/(rho0**gma)
-     >     *(rho)**(gma-1))
+     >     *(rho)**(gma-1.0))
       end
       
       function JWL_SO(AA,R1,rho0,rho,OM,BB,R2,pres,e2)
@@ -444,4 +444,28 @@ c added in formulas for speed of sound using tait and pure jwl
       JWL_SO=SQRT(AA*(R1*(rho0/rho)/rho-OM/(R1*rho0)-OM/rho)*
      >     exp(-R1*rho0/rho)+BB*(R2*(rho0/rho)/rho-OM/(R2*rho0)-
      >     OM/rho)*exp(-R2*rho0/rho)+OM*e2+OM*pres/rho)
+      end
+c JB110819
+c added formula for pressure and speed of sound using tait from Exxon      
+      function MixtTait_SO2(B,gma,rho0,rho)
+      implicit none
+      real MixtTait_SO2
+      real B,gma,rho0,rho
+      MixtTait_SO2=SQRT((2.16e9+0.0265e9*max(0.0,(rho-rho0)))*gma/
+     > (rho0**gma)*(rho**(gma-1))+0.0265e9*((rho/rho0)**gma-1))
+!(2.16E+09*gma/rho0**gma)*(rho**(gma-1.0))+
+!     >  (0.0265E+09*gma/rho0**gma)*(max((rho-rho0),0.0))*(rho**(gma-1))+
+!     >     0.0265E+09*((rho/rho0)**gma-1.0))
+c     term1 =(2.16E+09*gma/rho0**gma)*(rho**gma-1.0)
+c     term2 = (0.0265E+09*gma/rho0**gma)*(rho-rho0)*(rho**gma-1.0)
+c     term3 =  0.0265E+09*((rho/rho0)**gma-1.0)
+c     write(6,*) term1, term2, term3
+      end
+      function MixtTait_P_r2(rho,p0,rho0,B,gma)
+      implicit none
+      real MixtTait_P_r2
+      real rho,p0,rho0,B,gma
+      MixtTait_P_r2=p0+(2.16E+09+0.0265E+09*max((rho-rho0),0.0))*
+     >          (((rho/rho0)**gma)-1.0)
+!      write(50,*) p0,B,rho,rho0,gma
       end
