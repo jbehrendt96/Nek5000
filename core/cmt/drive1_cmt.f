@@ -54,7 +54,7 @@ c     Solve the Euler equations
 !! JH082718 mask viscosity in t(:,3)
 !!        call col2(t(1,1,1,1,3),t(1,1,1,1,5),nxyz*nelt)
 !!        call max_to_trilin(t(1,1,1,1,3))
-!         call entropy_viscosity         ! for high diffno
+!         call entropy_viscosity
          call semi_cook_viscosity                ! for high diffno
 !        call piecewiseAV(AVeverywhere)
          call compute_transport_props   ! at t=0

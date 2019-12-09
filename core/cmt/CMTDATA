@@ -69,12 +69,9 @@ c---------------------------------------------------------------------
       integer              stage,nstage,iostep2
       logical 		   dumped_stage
       common /tstepstage/ stage,nstage,iostep2,dumped_stage
-c     common /tstepstage/ stage,nstage,iostep2
 
       real                  tcoef(3,3),time_cmt,time_iotarg
       common /timestepcoef/ tcoef,time_cmt, time_iotarg
-c     real                  tcoef(3,3),time_cmt
-c     common /timestepcoef/ tcoef,time_cmt
       
       real              rho,phi,pres,cv,e_internal
      $                 ,t0in,p0in,asnd,rgas,cp,mu,lambda,molarmass

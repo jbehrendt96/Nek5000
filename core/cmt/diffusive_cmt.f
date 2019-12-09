@@ -318,12 +318,14 @@ c diffuse passive scalar (species)
     
       do j = 1,ldim
          call addcol3(flux(1,j),du(1,1,j),t(1,1,1,e,2),n) !Y*grad(U)
+c        write(6,*) du(1,1,j), t(1,1,1,e,2), flux(1,j)
          do i = 1,n     
            flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)*2.0
+c        write(6,*) du(1,6,j), vdiff(i,1,1,e,inus), flux(1,j)
            ! [grad(U_6) - Y*grad(U)]*viscocity
          enddo
       enddo         
-
+c     call exitt
       return
       end
 !----------------------------------------------------------------------

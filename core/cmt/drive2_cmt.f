@@ -18,7 +18,10 @@ c-----------------------------------------------------------------------
 
       iostep2=iostep
       iostep=9999999
-      
+!BAD Jul022019 Added a flag to signal dump of solution needs to happen
+!and added a variable as a physical time step goal for the code to check
+      dumped_stage = .FALSE.
+      time_iotarg = iotime  
 c     call setup_cmt_param
       return
       end
