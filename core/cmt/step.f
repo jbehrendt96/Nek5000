@@ -26,9 +26,9 @@ C> @file step.f time stepping and mesh spacing routines
 ! YOU REALLY PROBABLY WANT YOUR OWN SCRATCH SPACE FOR THAT
 !--------------------------------------------------------------
       common /udxmax/ umax
-      real strof
+      real strof,diffno4,dt4 !ADDED for lambda tracking
       data strof /1.0e-8/
-
+  
       dt=abs(param(12))
 
       NTOT   = lx1*ly1*lz1*NELV
@@ -45,10 +45,14 @@ C> @file step.f time stepping and mesh spacing routines
       if (ctarg .lt.0.5) then
          call compute_cfl (umax,utmp,vtmp,wtmp,1.0)
          dt_cfl=ctarg/umax
-         call glsqinvcolmin(dt1,vdiff(1,1,1,1,imu ),gridh,ntot,ctarg)
-         call glsqinvcolmin(dt2,vdiff(1,1,1,1,iknd),gridh,ntot,ctarg)
+         call glsqinvcolminR(dt1,vdiff(1,1,1,1,imu ),gridh,ntot,ctarg,
+     >                          vtrans(1,1,1,1,irho))
+         call glsqinvcolminK(dt2,vdiff(1,1,1,1,iknd),gridh,ntot,ctarg,
+     >                           T(1,1,1,1,1),vtrans(1,1,1,1,irho))
          call glsqinvcolmin(dt3,vdiff(1,1,1,1,inus),gridh,ntot,ctarg)
-         dt=min(dt_cfl,dt1,dt2,dt3)
+         call glsqinvcolminR(dt4,vdiff(1,1,1,1,ilam),gridh,ntot,ctarg,
+     >                          vtrans(1,1,1,1,irho))
+         dt=min(dt_cfl,dt1,dt2,dt3,dt4) !maybe make a dt4?
          if (dt .gt. 10.0) then
             if (nio.eq.0) write(6,*) 'dt huge. crashing ',istep,stage,
      >         dt
@@ -62,23 +66,36 @@ C> @file step.f time stepping and mesh spacing routines
       call lpm_set_dt(dt_ptcle) ! particle time step
       dt=min(dt,dt_ptcle)
 #endif
-
-      if (timeio .gt. 0.0) then ! adjust dt for timeio. 
-         zetime1=time_cmt
-         zetime2=time_cmt+dt
-         it1=zetime1/timeio
-         it2=zetime2/timeio
-         ita=it1
-         itb=ita+1
-         if (abs(zetime1-itb*timeio).le.strof) it1=itb
-         ita=it2
-         itb=ita+1
-         if (abs(zetime2-itb*timeio).le.strof) it2=itb
-         if (it2.gt.it1) then
-            ifoutfld=.true.
-            dt=(it2*timeio)-time_cmt
-         endif
+        
+!      if (timeio .gt. 0.0) then ! adjust dt for timeio. 
+!         zetime1=time_cmt
+!         zetime2=time_cmt+dt
+!         it1=zetime1/timeio
+!         it2=zetime2/timeio
+!         ita=it1
+!         itb=ita+1
+!         if (abs(zetime1-itb*timeio).le.strof) it1=itb
+!         ita=it2
+!         itb=ita+1
+!         if (abs(zetime2-itb*timeio).le.strof) it2=itb
+!         if (it2.gt.it1) then
+!            ifoutfld=.true.
+!            dt=(it2*timeio)-time_cmt
+!         endif
+!      endif
+!BAD Jul022019 Check if we met dumped at our time goal, if so push the 
+! goal to the next physical time dump
+      if (dumped_stage .eq. .TRUE.)then
+        time_iotarg = time_cmt + timeio
+        dumped_stage = .FALSE.
+        ifoutfld=.true.
       endif
+!BAD Jul022019 Check to see if we will over shoot our physical time
+!dump. If so, alter dt so that we arrive at the physical time dump for
+!the next time step      
+      if (((time_cmt + dt) .gt. time_iotarg) .AND. timeio .gt. 0 ) then
+        dt = time_iotarg - time_cmt
+      endif           
 
       param(12)=-dt
 
@@ -87,17 +104,22 @@ C> @file step.f time stepping and mesh spacing routines
 ! diffusion number based on viscosity.
 
 !     call mindr(mdr,diffno2)
-      call glinvcol2max(diffno1,vdiff(1,1,1,1,imu), gridh,ntot,dt)
-      call glinvcol2max(diffno2,vdiff(1,1,1,1,iknd),gridh,ntot,dt)
+      call glinvcol2maxR(diffno1,vdiff(1,1,1,1,imu), gridh,ntot,dt,
+     >                          vtrans(1,1,1,1,irho))
+      call glinvcol2maxK(diffno2,vdiff(1,1,1,1,iknd),gridh,ntot,dt,
+     >                          T(1,1,1,1,1),vtrans(1,1,1,1,irho))
       call glinvcol2max(diffno3,vdiff(1,1,1,1,inus),gridh,ntot,dt)
-c     write(6,*) 'LOOK', imu, vdiff(1,1,1,1,imu)
+      call glinvcol2maxR(diffno4,vdiff(1,1,1,1,ilam),gridh,ntot,dt,
+     >                          vtrans(1,1,1,1,irho))
+!added for lambda tracking also in format statment below 
 !     diffno=max(diffno1,diffno2,diffno3)
       time_cmt= time_cmt+dt
       time    = time_cmt
       if (nio.eq.0) WRITE(6,100)ISTEP,TIME_CMT,DT,COURNO,
-     >   diffno1,diffno2,diffno3
+     >   diffno1,diffno2,diffno3,diffno4
  100  FORMAT('CMT ',I7,', t=',1pE14.7,', DT=',1pE14.7
-     $,', C=',1pE12.5,', Dmu,knd,art=',3(1pE11.4))
+     $,', C=',1pE12.5,', Dmu,knd,art,lam=',4(1pE11.4))
+
 
       return
       end
@@ -285,6 +307,36 @@ c
 
 !-----------------------------------------------------------------------
 
+      subroutine glinvcol2maxR(col2m,a,b,n,s,den)
+      real col2m
+      real s
+      real a(*),b(*),den(*)
+      tmp=0.0
+      do i=1,n
+         tmp=max(tmp,abs(s*a(i)/b(i)/b(i)/den(i)))
+      enddo
+      col2m=glamax(tmp,1)
+      return
+      end
+
+
+
+!-----------------------------------------------------------------------
+
+      subroutine glinvcol2maxK(col2m,a,b,n,s,tea,den)
+      real col2m
+      real s
+      real a(*),b(*),tea(*),den(*)
+      tmp=0.0
+      do i=1,n
+      tmp=max(tmp,abs(s*((a(i)*tea(i)/den(i)/b(i)**4)**(1.0/3.0))))
+      enddo
+      col2m=glamax(tmp,1)
+      return
+      end
+!----------------------------------------------------------------------- 
+
+
       subroutine glsqinvcolmin(col2m,a,b,n,s)
       real col2m
       real s
@@ -297,7 +349,42 @@ c
       return
       end
 
+
+!----------------------------------------------------------------------- 
+
+
+      subroutine glsqinvcolminR(col2m,a,b,n,s,den)
+      real col2m
+      real s
+      real a(*),b(*),den(*)
+      tmp=1.0e36
+      do i=1,n
+         if (a(i).gt.1.0e-36) tmp=min(tmp,abs(s*den(i)*b(i)**2/a(i)))
+      enddo
+      col2m=glamin(tmp,1)
+      return
+      end
+
+
+
 !-----------------------------------------------------------------------
+
+
+      subroutine glsqinvcolminK(col2m,a,b,n,s,tea,den)
+      real col2m
+      real s
+      real a(*),b(*),tea(*),den(*)
+      tmp=1.0e36
+      do i=1,n
+      if (a(i).gt.1.0e-36) 
+     >   tmp=min(tmp,s*abs(den(i)*(b(i)**4)/a(i)/tea(i))**(1.0/3.0))
+      enddo
+      col2m=glamin(tmp,1)
+      return
+      end
+!----------------------------------------------------------------------- 
+
+
 
       subroutine compute_mesh_h(h,x,y,z)
 ! Zingan's DGFEM formula: h=minimum distance between vertices divided by

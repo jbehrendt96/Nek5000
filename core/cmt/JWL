@@ -6,6 +6,6 @@
 ! JH062519 Tait EOS for water. towards multispecies CMT-nek 
 !-----------------------------------------------------------------------
       real MixtTait_P_r, MixtTait_T_e, MixtTait_SO,
-     >     JWL_SO
+     >     JWL_SO, MixtTait_SO2, MixtTait_P_r2
       external MixtTait_P_r, MixtTait_T_e, MixtTait_SO,
-     >    JWL_SO
+     >    JWL_SO, MixtTait_SO2, MixtTait_P_r2

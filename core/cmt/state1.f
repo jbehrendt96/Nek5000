@@ -436,7 +436,6 @@ c added in formulas for speed of sound using tait and pure jwl
       MixtTait_SO=SQRT(B*gma/(rho0**gma)
      >     *(rho)**(gma-1.0))
       end
-      
       function JWL_SO(AA,R1,rho0,rho,OM,BB,R2,pres,e2)
       implicit none
       real JWL_SO

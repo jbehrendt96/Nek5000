@@ -67,10 +67,11 @@ c---------------------------------------------------------------------
      >    se0const
 
       integer              stage,nstage,iostep2
-      common /tstepstage/ stage,nstage,iostep2
+      logical 		   dumped_stage
+      common /tstepstage/ stage,nstage,iostep2,dumped_stage
 
-      real                  tcoef(3,3),time_cmt
-      common /timestepcoef/ tcoef,time_cmt
+      real                  tcoef(3,3),time_cmt,time_iotarg
+      common /timestepcoef/ tcoef,time_cmt, time_iotarg
       
       real              rho,phi,pres,cv,e_internal
      $                 ,t0in,p0in,asnd,rgas,cp,mu,lambda,molarmass
