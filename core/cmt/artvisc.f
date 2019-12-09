@@ -175,6 +175,48 @@
             enddo
             enddo
          enddo
+! JB120919
+! attempt to get diffusion coefficient (A8) from Cook's Enthalpy
+! diffusion paper
+
+!assume y_i >= 0
+! this makes C_Y term = 0
+! left with D*_i = [C_D*abs(Laplace Y_i)*h^2]*h^2/dt
+! for 2 species: D*_1 = smoothed [abs(Laplace Y_1)*h^4/dt
+!                D*_2 = smoothed [abs(-Laplce Y_1)*h^4/dt
+!                D*_1 = D*_2
+! Y_i = amount of species present
+
+! copied from kappa not sure what to do, should be laplacian of species  
+        call wgradm1(du(1,1,1),du(1,1,2),du(1,1,3),t(1,1,1,1,6),nelt)
+!     CHECK if3d changes wgradm1      
+         do k=1,ldim ! du comes out multiplied by Jomega=BM1
+            call invcol2(du(1,1,k),bm1,ntot)
+         enddo
+         call comp_sij(sij,nij,du(1,1,1),du(1,1,2),du(1,1,3),
+     >                 ur,us,ut,vr,vs,vt,wr,ws,wt)
+! loop after laplacian is found
+         do e =1,nelt
+            e_dist = meshh(e) 
+            l=0
+            do iz=1,lz1
+            do iy=1,ly1
+            do ix=1,lx1
+               l=l+1
+               res2(ix,iy,iz,e,4)=0.0
+               do k=1,ldim
+                  res2(ix,iy,iz,e,4)=res2(ix,iy,iz,e,4)+0.5*sij(l,k,e)
+               enddo
+!               t(ix,iy,iz,e,7) = ABS(res2(ix,iy,iz,e,3)) !for debug
+               res2(ix,iy,iz,e,4) = (ABS(res2(ix,iy,iz,e,4)) *
+     >              (e_dist**4)/dt) 
+            enddo
+            enddo
+            enddo
+         enddo
+! end JB120919 addition
+
+
 ! Debug dump
 !         e_dist = glmax(t(1,1,1,1,3),ntot)
 !         if (nio.eq.0) WRITE(*,*), 'abs grad T= ',e_dist, 'stage =',
@@ -183,7 +225,8 @@
 !         if (nio.eq.0) WRITE(*,*), 'csound= ',e_dist, 'stage =',stage
 
          call cfill(t(1,1,1,1,3),1.0E36,ntot)
-         do k = 1,3
+c maybe do to 4 when species diffusion is added
+         do k = 1,4
             call evmsmooth(res2(1,1,1,1,k),t(1,1,1,1,3),.true.) ! endpoints=.false.
                                                ! is intended to
                                                ! preserve face states,

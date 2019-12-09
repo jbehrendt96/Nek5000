@@ -320,7 +320,8 @@ c diffuse passive scalar (species)
          call addcol3(flux(1,j),du(1,1,j),t(1,1,1,e,2),n) !Y*grad(U)
 c        write(6,*) du(1,1,j), t(1,1,1,e,2), flux(1,j)
          do i = 1,n     
-           flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)*2.0
+c          flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)*2.0
+           flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,ispec)
 c        write(6,*) du(1,6,j), vdiff(i,1,1,e,inus), flux(1,j)
            ! [grad(U_6) - Y*grad(U)]*viscocity
          enddo
@@ -337,7 +338,7 @@ c     call exitt
       include 'SOLN'
 c subroutine written JB080819
 c diffuse passive scalar (species)
- 
+c not used 
       parameter (ldd=lx1*ly1*lz1)
       common /ctmp1/ viscscr(lx1,ly1,lz1) 
       real viscscr
@@ -411,6 +412,8 @@ c        enddo
             vdiff(i,j,k,e,ilam) = lambda!NEKUSE
             vdiff(i,j,k,e,iknd) = udiff! NEKUSE
             vdiff(i,j,k,e,inus) = nu_s ! CMTDATA
+! JB 120919 coefficient for species diffusion
+            vdiff(i,j,k,e,ispec) = spec_diff         
          enddo
          enddo
          enddo
