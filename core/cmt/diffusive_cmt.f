@@ -318,12 +318,19 @@ c diffuse passive scalar (species)
     
       do j = 1,ldim
          call addcol3(flux(1,j),du(1,1,j),t(1,1,1,e,2),n) !Y*grad(U)
+                                                          !U is density
+                                                          !in this case
 c        write(6,*) du(1,1,j), t(1,1,1,e,2), flux(1,j)
          do i = 1,n     
+           flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)
 c          flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)*2.0
-           flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,ispec)
-c        write(6,*) du(1,6,j), vdiff(i,1,1,e,inus), flux(1,j)
+c  might need a negative sign
+cc         flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,ispec)
+c          if(flux(i,j).gt.0.0) then
+c        write(6,*) du(i,6,j), vdiff(i,1,1,e,inus), flux(i,j)
+c          endif
            ! [grad(U_6) - Y*grad(U)]*viscocity
+           ! U_6 is rho*Y
          enddo
       enddo         
 c     call exitt
@@ -354,7 +361,8 @@ c          flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)
 c          ! [grad(U_6) - Y*grad(U)]*viscocity
 c        enddo
       enddo         
-
+         write(6,*)'wrong scalar flux'
+         call exitt
       return
       end
 !-----------------------------------------------------------------------
@@ -413,7 +421,10 @@ c        enddo
             vdiff(i,j,k,e,iknd) = udiff! NEKUSE
             vdiff(i,j,k,e,inus) = nu_s ! CMTDATA
 ! JB 120919 coefficient for species diffusion
-            vdiff(i,j,k,e,ispec) = spec_diff         
+c           if(spec_diff.gt.0.0)then
+c           write(6,*) spec_diff
+c           endif
+cc          vdiff(i,j,k,e,ispec) = spec_diff         
          enddo
          enddo
          enddo

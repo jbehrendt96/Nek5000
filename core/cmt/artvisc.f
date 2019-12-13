@@ -167,7 +167,7 @@
                do k=1,ldim
                   res2(ix,iy,iz,e,3)=res2(ix,iy,iz,e,3)+0.5*sij(l,k,e)
                enddo
-!               t(ix,iy,iz,e,7) = ABS(res2(ix,iy,iz,e,3)) !for debug
+!              t(ix,iy,iz,e,8) = ABS(res2(ix,iy,iz,e,3)) !for debug
                res2(ix,iy,iz,e,3) = (ABS(res2(ix,iy,iz,e,3)) /
      >              (t(ix,iy,iz,e,1))**2) * vtrans(ix,iy,iz,e,irho) 
      >                * (e_dist**3) * csound(ix,iy,iz,e)**3 
@@ -188,7 +188,7 @@
 ! Y_i = amount of species present
 
 ! copied from kappa not sure what to do, should be laplacian of species  
-        call wgradm1(du(1,1,1),du(1,1,2),du(1,1,3),t(1,1,1,1,6),nelt)
+        call wgradm1(du(1,1,1),du(1,1,2),du(1,1,3),t(1,1,1,1,2),nelt)
 !     CHECK if3d changes wgradm1      
          do k=1,ldim ! du comes out multiplied by Jomega=BM1
             call invcol2(du(1,1,k),bm1,ntot)
@@ -207,9 +207,12 @@
                do k=1,ldim
                   res2(ix,iy,iz,e,4)=res2(ix,iy,iz,e,4)+0.5*sij(l,k,e)
                enddo
-!               t(ix,iy,iz,e,7) = ABS(res2(ix,iy,iz,e,3)) !for debug
-               res2(ix,iy,iz,e,4) = (ABS(res2(ix,iy,iz,e,4)) *
-     >              (e_dist**4)/dt) 
+                res2(ix,iy,iz,e,4) = (ABS(res2(ix,iy,iz,e,4)) *
+     >              (e_dist**4)/dt)
+c                t(ix,iy,iz,e,8) = ABS(res2(ix,iy,iz,e,4))*0.003 !for debug
+c               if(res2(ix,iy,iz,e,4).gt. 0.0) then
+c               write(6,*) res2(ix,iy,iz,e,4), e_dist, dt
+c               endif
             enddo
             enddo
             enddo
