@@ -143,7 +143,8 @@ C> for EVM
          call fluxj_ns (flux,du,e,eq)
 C> \f$\nu_s \nabla \rho\f$, \f$\nu_s \left(\nabla \rho \right) \otimes \mathbf{u}\f$
 C> and \f$\nu_s \nabla \left(\rho e\right)\f$.  \f$\nu_s=0\f$ for Navier-Stokes
-         call fluxj_evm(flux,du,e,eq)
+c JB121519 no evm viscosity
+c         call fluxj_evm(flux,du,e,eq)
       endif
 
 
@@ -323,7 +324,7 @@ c diffuse passive scalar (species)
 c        write(6,*) du(1,1,j), t(1,1,1,e,2), flux(1,j)
          do i = 1,n     
            flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)
-c          flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)*2.0
+cc         flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,inus)*2.0
 c  might need a negative sign
 cc         flux(i,j) = (du(i,6,j) - flux(i,j))*vdiff(i,1,1,e,ispec)
 c          if(flux(i,j).gt.0.0) then
